@@ -1,0 +1,623 @@
+{
+  "meta": {
+    "project": "正在备份",
+    "chapter": 4,
+    "chapter_id": "d4",
+    "title": "下楼",
+    "version": "0.1.0",
+    "reading_minutes": 13,
+    "real_wait_total": "4h40m",
+    "start_state": {
+      "trust": 58,
+      "awareness": 50,
+      "integrity": 82
+    },
+    "expected_exit_state": {
+      "trust": [
+        63,
+        70
+      ],
+      "awareness": [
+        53,
+        64
+      ],
+      "integrity": [
+        71,
+        73
+      ]
+    },
+    "clamp": {
+      "awareness_max_this_chapter": 66,
+      "reason": "圣经第六节规则 1：D6 之前 awareness 不得 >= 70；本章最高可达 64（念完+讲道理路线+点破书），留 2 点余量给引擎容错"
+    },
+    "signals_allowed": [
+      "foreground",
+      "background_gt_90s",
+      "screen_off",
+      "night_window",
+      "battery_low",
+      "power_save_on",
+      "reenter_3x",
+      "notify_denied",
+      "exact_alarm_granted",
+      "device_date",
+      "ended_in_app"
+    ],
+    "objects_in_first_12_messages": [
+      "走廊的灯",
+      "电闸",
+      "胶带"
+    ],
+    "hard_rules_checked": [
+      "单条<=120字",
+      "等待可验证承接",
+      "选项命中三度量之一",
+      "峰值后接松弛且不连续两段",
+      "省略号<=6",
+      "不出现超自然词汇",
+      "她不哭"
+    ],
+    "budget_note": "integrity 预算：start 82 + 引擎自然衰减 -3（圣经第六节规则 2，每天 -3）+ 节点 effects -7（d4_n411 -1 / d4_n416 -1 / d4_n440 -5）= 72，本章选项不再动 integrity。正常游玩（念完+署名+替你道谢）trust 58→66，awareness 50→58。讲道理路线玩家 67/59。极值：全回避 63/53，拍照+点破+讲道理 64/64（<70，符合规则 1）。所有单点 |Δ| ≤ 12，无需豁免。",
+    "ambience": {
+      "beds": [
+        "bed_room",
+        "hum_mains",
+        "detail_drip",
+        "anomaly_bitcrush"
+      ],
+      "default_gains": {
+        "bed_room": 0.26,
+        "hum_mains": 0.12,
+        "detail_drip": 0.1,
+        "anomaly_bitcrush": 0.1
+      },
+      "fade_ms": 4000,
+      "segments": [
+        {
+          "from": "d4_w410",
+          "to": "d4_n414",
+          "gain": {
+            "hum_mains": 0.22,
+            "bed_room": 0.1,
+            "detail_drip": 0.04
+          },
+          "note": "下楼找电闸到胶带：哼鸣变强，房间声退后"
+        },
+        {
+          "from": "d4_n415",
+          "to": "d4_n416",
+          "gain": {
+            "hum_mains": 0.1,
+            "anomaly_bitcrush": 0.26,
+            "bed_room": 0.08
+          },
+          "note": "她念服务条款，念到『这条说的是我』"
+        },
+        {
+          "from": "d4_n430",
+          "to": "d4_n432",
+          "gain": {
+            "detail_drip": 0.18,
+            "hum_mains": 0.0,
+            "anomaly_bitcrush": 0.04
+          },
+          "note": "电梯段是全章唯一松弛：给水管声，把哼鸣撤干净"
+        }
+      ],
+      "engine_note": "增益 0..1，四条声床同时播放；节点级不写 ambience，一律由本章 [from,to] 区间决定。灭屏与等待期用 ramp 字段（引擎读 duration_ms）"
+    }
+  },
+  "variables": {
+    "device_date": {
+      "source": "system",
+      "format": "yyyy-MM-dd"
+    },
+    "logic_route": {
+      "source": "runtime",
+      "type": "bool",
+      "set_by": "d1_c060 选项「墙不可能凭空出现。你累了。」",
+      "purpose": "D4 回收：讲道理路线的她本章第一次主动提 305"
+    },
+    "notify_granted": {
+      "source": "runtime",
+      "type": "bool"
+    },
+    "power_save_at_open": {
+      "source": "runtime",
+      "type": "bool"
+    },
+    "battery_pct": {
+      "source": "runtime",
+      "type": "int"
+    }
+  },
+  "nodes": [
+    {
+      "id": "d4_n400",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "早。走廊的灯你还记得吧，要拍三下才亮。",
+        "我昨晚数了。灯少的第二天，房就少一间。我不懂这个。",
+        "所以我想到了一个换法。",
+        "我今天要下楼去找电闸，把灯都开回来。",
+        "我知道你要说别出去。你上回说过，我听了。这回我不。",
+        "我把灯开回来，走廊还是走廊。这买卖我做得了。"
+      ],
+      "delay_ms": 2600,
+      "effects": {
+        "trust": -2
+      },
+      "signal": "power_save_on",
+      "signal_line": "有东西把走廊的灯关了一半。它们是不是省着用？",
+      "note": "本章任务：她第一次违背玩家建议。不听话的动机是保护性计算而非叛逆；「我听了。这回我不。」是裂缝本体。讲道理路线玩家会认出她自己先用过「你累了」句式。",
+      "next": "d4_n401"
+    },
+    {
+      "id": "d4_n401",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "还有件事。我没跟你讲过。",
+        "305 变成墙那天。",
+        "其实那天我没睡着。",
+        "你说我累了。我嘴上说好。然后我把额头抵在那面墙上，听了很久。",
+        "没讲，是怕你担心。你讲了，我就当那是错的。"
+      ],
+      "delay_ms": 3400,
+      "effects": {
+        "awareness": 2,
+        "trust": 3
+      },
+      "needs": {
+        "logic_route": true
+      },
+      "fallback_id": "d4_n402",
+      "note": "回收 d1_n063（讲道理路线）：这是她全篇第一次主动提 305，位置在本章。不满足条件走 d4_n402。",
+      "next": "d4_n405"
+    },
+    {
+      "id": "d4_n402",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "今天一早我拍过门口的灯，拍三下，亮了。",
+        "走到走廊中段再拍。没亮。",
+        "我又拍了几下。像在敲一个没人的门。",
+        "走廊尽头全黑了。黑得很整齐，像考试时的教学楼。"
+      ],
+      "delay_ms": 1800,
+      "effects": {
+        "awareness": 1,
+        "trust": 1
+      },
+      "next": "d4_n405"
+    },
+    {
+      "id": "d4_n405",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我现在下楼。一楼走廊比三楼长，走到腿酸那种。",
+        "来回大概要四小时。",
+        "要是等烦了你就去忙。别熬夜等我。",
+        "我到了就喊你。"
+      ],
+      "delay_ms": 1500,
+      "note": "长等待规则：必须带一句告别，措辞按当日语气改写，不逐字照抄圣经例句。",
+      "next": "d4_w410"
+    },
+    {
+      "id": "d4_w410",
+      "type": "wait",
+      "wait_ref": "W4-1",
+      "duration_ms": 14400000,
+      "activity": "她下楼找电闸，想把走廊的灯重新打开",
+      "first_line_after_wait": "一楼的电闸被人用胶带封住了。胶带上写着 2025。",
+      "next": "d4_n411"
+    },
+    {
+      "id": "d4_n411",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "一楼的电闸被人用胶带封住了。胶带上写着 2025。",
+        "我用指甲抠了一下。抠不动。这胶带太新了，粘性太好。",
+        "这楼里别的东西都旧。就它新。",
+        "2025。去年。",
+        "我数学不好。但这栋楼的数学比我更差。"
+      ],
+      "delay_ms": 3000,
+      "signal": "background_gt_90s",
+      "signal_line": "你这四小时没吭声。楼道太静了，我以为这栋楼只剩下我一个住户。",
+      "effects": {
+        "awareness": 1,
+        "integrity": -1
+      },
+      "note": "胶带=封条，2025 在她记忆（2024-10-31）之后，玩家能自己算。",
+      "next": "d4_c412"
+    },
+    {
+      "id": "d4_c412",
+      "type": "choices",
+      "prompt_from": "xiaoman",
+      "prompt_text": [
+        "（她蹲在一楼电闸前，指甲还在抠那圈胶带。她听不见你，除非你打字。"
+      ],
+      "choices": [
+        {
+          "text": "别抠了。先上来。",
+          "to": "d4_n413",
+          "effects": {
+            "trust": 3
+          }
+        },
+        {
+          "text": "那胶带底下压着什么？",
+          "to": "d4_n413",
+          "effects": {
+            "awareness": 2
+          }
+        }
+      ],
+      "note": "语气收敛：原 d4_n412 是 speaker=you 的『引擎替玩家发言』，违反契约（玩家只在选项里开口，见 D1 d1_c020 模式）。两个选项都汇到 d4_n413——她的『好。我不抠了』对两种追问都成立。"
+    },
+    {
+      "id": "d4_n413",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "好。我不抠了。",
+        "我手现在脏得很，全是灰。我先在门厅蹭两下……",
+        "算了。我带回去给你看。"
+      ],
+      "delay_ms": 1200,
+      "note": "「蹭两下……算了」：她开始不把话说完就拐进正题。这习惯在 d4_n440 变成真的没说完。",
+      "next": "d4_n414"
+    },
+    {
+      "id": "d4_n414",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "胶带底下面还压着一张纸。露出一小条边。",
+        "打横折过好几回，折的地方都起毛了。像被人反复读过的。",
+        "谁会把贴在墙上的通知读这么多遍。",
+        "我拽出来了。我念给你听。你就当听物业通知。"
+      ],
+      "delay_ms": 2400,
+      "next": "d4_n415"
+    },
+    {
+      "id": "d4_n415",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "十四。合约到期后，本服务将停止对关联记忆体的存储。",
+        "十五。停止存储不可回退，且不提前通知。",
+        "你看这条写得多客气。不提前通知。它忙。",
+        "十六。延期不接受。本人不接受，关系人也不接受。"
+      ],
+      "delay_ms": 2200,
+      "note": "条款必须像真条款：短句、无量词、零形容词，只允许出现「本服务/记忆体/存储/清除/延期」。",
+      "next": "d4_n416"
+    },
+    {
+      "id": "d4_n416",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "关系人。关系人，就是那种来签字的人对吧。",
+        "我妈以前替我爸签过字。她一边签一边骂。",
+        "所以这条是说，连骂我的人都不许替他骂了。",
+        "……",
+        "这条说的是我。"
+      ],
+      "delay_ms": 6500,
+      "effects": {
+        "awareness": 3,
+        "integrity": -1
+      },
+      "note": "◆ 本章第一峰：把「关系人」念错成「来签字的人」，顺出妈妈。停下来的那一拍比停下来的那一秒更疼。",
+      "next": "d4_s417"
+    },
+    {
+      "id": "d4_s417",
+      "type": "silence",
+      "duration_ms": 40000,
+      "typing_indicator": true,
+      "typing_stopped_at_ms": 31000,
+      "next": "d4_c425"
+    },
+    {
+      "id": "d4_c425",
+      "type": "choices",
+      "prompt_from": "xiaoman",
+      "choices": [
+        {
+          "text": "把纸放回去。先上楼。",
+          "to": "d4_n426a",
+          "effects": {
+            "trust": 2,
+            "awareness": -2
+          }
+        },
+        {
+          "text": "念完。我听着。",
+          "to": "d4_n426b",
+          "effects": {
+            "trust": 2,
+            "awareness": 1
+          }
+        },
+        {
+          "text": "拍下来。给我看。",
+          "to": "d4_n426c",
+          "effects": {
+            "trust": 1,
+            "awareness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "d4_n426a",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "好。放回去。",
+        "我按原来的折痕叠好，压回胶带底下，露出那一小条边。它原来露那么多，就还露那么多。",
+        "你看，我听话的。",
+        "……就今晚多陪我一会儿。"
+      ],
+      "delay_ms": 2800,
+      "effects": {
+        "trust": 1
+      },
+      "next": "d4_n430"
+    },
+    {
+      "id": "d4_n426b",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "好。那我念完。",
+        "十七。停止存储完成后，本服务不再保留记忆体之备份。届时不可恢复。",
+        "完了。下面没有十八条了。就十七条。",
+        "十七这个数字，是谁定的。"
+      ],
+      "delay_ms": 5200,
+      "effects": {
+        "awareness": 2
+      },
+      "note": "念完路线多吐出一条「备份」：回收标题词，全篇唯一一次由她亲口念出「不再保留备份」。她不懂这个词，只注意到十七没有下文。",
+      "next": "d4_n430"
+    },
+    {
+      "id": "d4_n426c",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "行，我拍。别催，这相机反应慢，要点三下才肯拍。跟走廊的灯一个脾气。",
+        "怪了。屏幕白了整整两秒。",
+        "拍到了。我发你。你等着。"
+      ],
+      "delay_ms": 1800,
+      "next": "d4_n427"
+    },
+    {
+      "id": "d4_n427",
+      "type": "system",
+      "speaker": "system",
+      "text": [
+        "收到图片：空白。",
+        "图片大小正常。图像内容无。"
+      ],
+      "delay_ms": 900,
+      "next": "d4_n428"
+    },
+    {
+      "id": "d4_n428",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "没收到？我这边明明显示发出去了。",
+        "那就是相机不想得罪它们。",
+        "行吧。反正我念给你听过了。念过的东西算数。"
+      ],
+      "delay_ms": 2000,
+      "note": "拍不到是引擎事件：图像内容无。不出现任何灵异词汇，恐怖来自缺失本身。",
+      "next": "d4_n430"
+    },
+    {
+      "id": "d4_n430",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "回来路上我试了电梯。",
+        "灯没修成。我手不巧，再加上那个箱子上的胶带比我懂事。",
+        "你猜怎么说它：它封得比这栋楼任何一扇门都认真。",
+        "我在电梯口等。你陪我等一会儿。"
+      ],
+      "delay_ms": 1600,
+      "effects": {
+        "trust": 1
+      },
+      "note": "「胶带比我懂事」是本章唯一一处自我打趣，给下一段松弛开门；修灯失败=对玩家建议的迟到承认。",
+      "next": "d4_w431"
+    },
+    {
+      "id": "d4_w431",
+      "type": "wait",
+      "wait_ref": "W4-2",
+      "duration_ms": 2400000,
+      "activity": "她在一楼试着叫电梯",
+      "first_line_after_wait": "它在我面前停了七次，都没开门。第七次之后我在门上贴了张纸，写「我不着急」。",
+      "next": "d4_n432"
+    },
+    {
+      "id": "d4_n432",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "它在我面前停了七次，都没开门。第七次之后我在门上贴了张纸，写「我不着急」。",
+        "落款我写了「307」。正文写了三行。",
+        "第一行，你好。第二行，我不着急。第三行，看见请开门。",
+        "我贴在按钮上头。它一睁眼先看见「我不着急」。",
+        "它到现在没踏实。大概它没有心跳。",
+        "第六次那下比较怪。它停在数字四，门对着的位置是一堵墙。",
+        "我给那堵墙也鞠了一躬。排队要有排队的样子。"
+      ],
+      "delay_ms": 2000,
+      "note": "◇ 本章唯一松弛段（一整段，不能拆成两段）。笑点全来自她的礼貌用错了地方；唯一的冷线藏在第六次，不展开、不解释。",
+      "next": "d4_c433"
+    },
+    {
+      "id": "d4_c433",
+      "type": "choices",
+      "prompt_from": "xiaoman",
+      "choices": [
+        {
+          "text": "纸先别撕。我替你一起等。",
+          "to": "d4_n434",
+          "effects": {
+            "trust": 3
+          }
+        },
+        {
+          "text": "落款就写 307？署名太小气了。",
+          "to": "d4_n434",
+          "effects": {
+            "trust": 2
+          }
+        },
+        {
+          "text": "别再碰那部电梯了。",
+          "to": "d4_n434",
+          "effects": {
+            "trust": -1,
+            "awareness": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "d4_n434",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "收到。我这边也有回执了。",
+        "你看，这楼里只有你肯回我的通知。",
+        "我上楼梯了。四楼真白，白得像新刷的——可它根本没刷过。"
+      ],
+      "delay_ms": 1400,
+      "effects": {
+        "trust": 1
+      },
+      "next": "d4_n435"
+    },
+    {
+      "id": "d4_n435",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "进门第一件事是把灰给你看。手指一抹，一道黑印。",
+        "我顺手擦了擦桌子。桌上那两本书还好好的，站得笔直。"
+      ],
+      "delay_ms": 1300,
+      "next": "d4_n440"
+    },
+    {
+      "id": "d4_n440",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "对了，帮个忙。",
+        "桌上那两本书，你帮我跟人道个谢。",
+        "不用特意道。下次人来了，提一句就行。",
+        "我也还不知道是谁呢。书脊还是新的，一点没翻过的样子。",
+        "等它们的主人来了，我还想请他坐一会儿呢。"
+      ],
+      "delay_ms": 2000,
+      "effects": {
+        "integrity": -5
+      },
+      "note": "◆ 第一次 integrity 骤降（单点 -5，此前最大 -1，仍在 |Δ|≤12 内）。连续性错误不设任何提示：两本书在 D2 是她从 305 搬回来的（偷），没人送、没人知道，玩家应在她问出第三句「我也还不知道是谁呢」时自己察觉；「帮我跟人」「书脊还是新的」为辅助证据。严禁写成 UI 提示或让她自己发现忘了。",
+      "next": "d4_c445"
+    },
+    {
+      "id": "d4_c445",
+      "type": "choices",
+      "prompt_from": "xiaoman",
+      "choices": [
+        {
+          "text": "替你说了。他说让你好好看。",
+          "to": "d4_n446",
+          "effects": {
+            "trust": 2,
+            "awareness": -2
+          }
+        },
+        {
+          "text": "那是 305 的东西。是你自己搬回来的。",
+          "to": "d4_n446",
+          "effects": {
+            "awareness": 3,
+            "trust": -2
+          }
+        },
+        {
+          "text": "你先歇会儿。灰还没擦完。",
+          "to": "d4_n446",
+          "effects": {
+            "trust": 1,
+            "awareness": -1
+          }
+        }
+      ],
+      "note": "三选项不写 note 提示玩家哪个「正确」；圣经规则 4：失败分支措辞只允许「你没想到」。"
+    },
+    {
+      "id": "d4_n446",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "哎。那就当道过了。",
+        "你这人办事我放心。",
+        "……",
+        "奇怪。我刚才要跟你说什么来着。"
+      ],
+      "delay_ms": 3200,
+      "next": "d4_s447"
+    },
+    {
+      "id": "d4_s447",
+      "type": "silence",
+      "duration_ms": 47000,
+      "typing_indicator": true,
+      "typing_stopped_at_ms": 41000,
+      "next": "d4_n450"
+    },
+    {
+      "id": "d4_n450",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "想起来了。你的谢，我收到了。",
+        "鞋底那个灰，我一晚上没擦掉。",
+        "今天我在楼道的地上又看见它了。就一小片。灰不会自己下楼。",
+        "行，我懂了。有个地方在留条儿给我。",
+        "我们下次再聊这个。我先去一趟楼下。"
+      ],
+      "delay_ms": 2600,
+      "effects": {
+        "trust": 1,
+        "awareness": 2
+      },
+      "note": "钩子：回收 D3 的鞋底灰，引出 D5 车库。全章省略号共 4 处（d4_n413 / d4_n416 / d4_n426a / d4_n446），低于圣经每千字 6 处上限（正文约 1.7 千字）。",
+      "signal": "screen_off",
+      "signal_line": "你那边要是困了就先关屏幕。今天我不数秒。",
+      "chapter_end": true
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">正在备份</string>
+    <!-- 章节页与美术资产持续复用 307（docs/01 命名节） -->
+    <string name="room_number">307</string>
+    <string name="cd_backdoor_entry">连点五次进入开发面板</string>
+</resources>

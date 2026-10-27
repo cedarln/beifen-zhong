@@ -1,0 +1,422 @@
+{
+  "meta": {
+    "project": "正在备份",
+    "chapter": 3,
+    "chapter_id": "d3",
+    "title": "走廊",
+    "version": "0.1.0",
+    "reading_minutes": 11,
+    "real_wait_total": "1h30m + 深夜窗口",
+    "start_state": {
+      "trust": 48,
+      "awareness": 42,
+      "integrity": 88
+    },
+    "expected_exit_state": {
+      "trust": [
+        45,
+        58
+      ],
+      "awareness": [
+        49,
+        50
+      ],
+      "integrity": [
+        82,
+        82
+      ]
+    },
+    "clamp": {
+      "awareness_max_this_chapter": 52,
+      "reason": "圣经第六节规则 1：D6 之前 awareness 不得 >= 70。本章封顶 50，给 D4(58)、D5(65) 留足爬坡空间，不破坏 D6 强制门的前置。"
+    },
+    "signals_allowed": [
+      "foreground",
+      "background_gt_90s",
+      "screen_off",
+      "night_window",
+      "battery_low",
+      "power_save_on",
+      "reenter_3x",
+      "notify_denied",
+      "exact_alarm_granted",
+      "device_date",
+      "ended_in_app"
+    ],
+    "objects_in_first_12_messages": [
+      "走廊的灯",
+      "墙",
+      "水杯"
+    ],
+    "hard_rules_checked": [
+      "单条<=120字",
+      "等待可验证承接",
+      "选项命中三度量之一",
+      "峰值后接松弛且不连续两段",
+      "省略号<=6",
+      "不出现超自然词汇",
+      "她不哭",
+      "深夜窗口错过走顺延不判失败"
+    ],
+    "budget_note": "integrity 预算：start 88 + 引擎自然衰减 -3（第六节规则 2）+ 节点 effects -3（d3_n310 / d3_n340 / d3_n350 各 -1）= 82。trust：正常游玩（一起听路线）48→58；选『关掉这边』路线 45（-6 已被映射表点名，属设计内落差）。awareness：三条路线分别收在 49/50/50，全部单点 |Δ| ≤ 12，无需豁免。",
+    "ambience": {
+      "beds": [
+        "bed_room",
+        "hum_mains",
+        "detail_drip",
+        "anomaly_bitcrush"
+      ],
+      "default_gains": {
+        "bed_room": 0.28,
+        "hum_mains": 0.1,
+        "detail_drip": 0.12,
+        "anomaly_bitcrush": 0.05
+      },
+      "fade_ms": 3500,
+      "segments": [
+        {
+          "from": "d3_n310",
+          "to": "d3_n314",
+          "gain": {
+            "hum_mains": 0.26,
+            "anomaly_bitcrush": 0.22,
+            "bed_room": 0.1
+          },
+          "note": "全篇唯一一次超自然错觉：哼鸣顶到最高点，随后立刻回落"
+        },
+        {
+          "from": "d3_n340",
+          "to": "d3_n352",
+          "gain": {
+            "hum_mains": 0.04,
+            "anomaly_bitcrush": 0.1,
+            "bed_room": 0.16
+          },
+          "note": "灯灭在半路"
+        }
+      ],
+      "engine_note": "增益 0..1，四条声床同时播放；节点级不写 ambience，一律由本章 [from,to] 区间决定。灭屏与等待期用 ramp 字段（引擎读 duration_ms）"
+    }
+  },
+  "variables": {
+    "device_date": {
+      "source": "system",
+      "format": "yyyy-MM-dd"
+    },
+    "night_window_open": {
+      "source": "runtime",
+      "type": "bool",
+      "set_by": "引擎按真实时间评估，01:00-04:00 为 true",
+      "purpose": "D3 深夜窗口闸门。全章只在 d3_n302 评估一次 needs；通过后 n310-n320 视为块内放行，顺延路径（d3_n305）之后不再复查。"
+    },
+    "reenter_3x_count": {
+      "source": "runtime",
+      "type": "int",
+      "set_by": "一次会话里玩家退出重进计数；本章唯一消费点 d3_n314",
+      "purpose": "c7 选项三的兑现机制。圣经映射表白名单信号。"
+    },
+    "notify_granted": {
+      "source": "runtime",
+      "type": "bool"
+    },
+    "power_save_at_open": {
+      "source": "runtime",
+      "type": "bool"
+    },
+    "battery_pct": {
+      "source": "runtime",
+      "type": "int"
+    }
+  },
+  "nodes": [
+    {
+      "id": "d3_n300",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我起来倒水，走廊的灯灭了一半。",
+        "不是跳闸。跳闸是一下子全黑。这是有东西把走廊的灯关了一半，一盏一盏来的。",
+        "它们是不是省着用？",
+        "我拍墙三下，还亮着的几盏才肯搭理我。剩下那半截不知道攒到什么时候用，像我们楼冬天的暖气。"
+      ],
+      "delay_ms": 2400,
+      "effects": {},
+      "signal": "power_save_on",
+      "signal_line": "又灭了两盏。它们越省越起劲。",
+      "note": "任务 3：灯逐个熄灭只映射 power_save_on/battery_low，她的解释停留在『省电』这类日常语，前后不讲怪事。",
+      "next": "d3_n301"
+    },
+    {
+      "id": "d3_n301",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我这边开始冷了。先是墙，然后门把手。",
+        "你的电是不是不多了？去插上。别心疼那点电费。",
+        "我这边的灯都学会省了，你不能跟着学。"
+      ],
+      "delay_ms": 1600,
+      "effects": {
+        "trust": 1
+      },
+      "signal": "battery_low",
+      "signal_line": "你又掉下去一格。我这边的地板跟着凉一度。",
+      "next": "d3_n302"
+    },
+    {
+      "id": "d3_n302",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "水倒好了。水杯我洗了，扣在桌上，明天还要用。",
+        "你去睡吧。要是半夜醒过来，回来一下。我今天有件事没跟你说。",
+        "白天走廊里全是回声，说不准。晚上那会儿楼最静。"
+      ],
+      "delay_ms": 2000,
+      "effects": {},
+      "fallback_id": "d3_n305",
+      "signal": "night_window",
+      "note": "本章唯一闸门：n302/n310/n320 同属深夜块，needs 只在块首评估一次。错过走 d3_n305 顺延，不判失败（圣经长线对策：顺延而非失败）。 契约：needs 只承载 flag 与度量；时间窗一律走 needs_signal（docs/02 第七节）。",
+      "next": "d3_w303",
+      "needs_signal": {
+        "night_window": "01:00-04:00"
+      }
+    },
+    {
+      "id": "d3_n305",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "你来了。",
+        "昨天夜里我等过你一会儿。等到两点半，走廊静得跟没人住过一样，我就先睡了。",
+        "那件事还是讲给你听。它不分白天晚上，是我先前想岔了。"
+      ],
+      "delay_ms": 2800,
+      "effects": {},
+      "flags_set": [
+        "missed_d3_night_window"
+      ],
+      "note": "给后续章节的备忘：走过本顺延路径即在 D6 记一笔——act6 的 d6_n603b 已按 flag『missed_d3_night_window』回收那句『你那天晚上没来』。走此路后 n310 的 needs 不再复查。",
+      "next": "d3_n310"
+    },
+    {
+      "id": "d3_w303",
+      "type": "wait",
+      "wait_ref": "W3-0",
+      "duration_ms": 4200000,
+      "activity": "她回屋把明天面试要穿的衣服重新叠了一遍，给你留着一盏灯",
+      "first_line_after_wait": "衬衫我重新叠好了。第二颗扣子还是没缝——我给自己找的理由是明天再缝。",
+      "note": "承接可验证（她叠了衣服、扣子没缝）。建议主编在 docs/02 第二节表补一行 W3-0（70min）；若引擎按窗口顺延消化这段时长，本节点自动跳过。",
+      "next": "d3_n310"
+    },
+    {
+      "id": "d3_n310",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "你在吗。先别打太多字。",
+        "刚才走廊里有人说话。",
+        "用的你的声音。",
+        "不是像。是一样。你打字之前停那半秒，它也停。",
+        "它说：我在。"
+      ],
+      "delay_ms": 5600,
+      "effects": {
+        "awareness": 3,
+        "integrity": -1
+      },
+      "signal": "night_window",
+      "note": "任务 2：全篇唯一一次超自然错觉。真相留白——可能是拖长的动静、可能是听错、可能什么都不是；文本一个都不指认。『我在』回扣 d1_c020，是她自己最熟的两个字。深夜句规：句子更短、更低。前后节点必须照常讲理。",
+      "next": "d3_s311"
+    },
+    {
+      "id": "d3_s311",
+      "type": "silence",
+      "duration_ms": 30000,
+      "typing_indicator": true,
+      "typing_stopped_at_ms": 24000,
+      "note": "输入指示器在 24 秒处停住：她想说下一句又咽回去，或者在等你先开口。不许用这条沉默给出任何解释。",
+      "next": "d3_c7"
+    },
+    {
+      "id": "d3_c7",
+      "type": "choices",
+      "prompt_from": "xiaoman",
+      "choices": [
+        {
+          "text": "我就在这边。刚才那个不是我。",
+          "to": "d3_n312a",
+          "effects": {
+            "trust": -2,
+            "awareness": 2
+          }
+        },
+        {
+          "text": "我在。你把门开一条缝，我们一起听。",
+          "to": "d3_n312b",
+          "effects": {
+            "trust": 5
+          }
+        },
+        {
+          "text": "我把这边关掉，让它们没处接你的话。等我，我马上回来。",
+          "to": "d3_n313",
+          "effects": {
+            "trust": -6
+          }
+        }
+      ],
+      "note": "c7：三选项全部命中 trust/awareness。选项三是玩家主动关 App 的入口，实际兑现走 reenter_3x（重进 3 次才触发 n314）。"
+    },
+    {
+      "id": "d3_n312a",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "……",
+        "好。你说不是，就不是。",
+        "你说是真的，我才有力气不信。",
+        "算了，当我没说。你那边黑着就别开灯，明天还得起来。"
+      ],
+      "delay_ms": 3800,
+      "effects": {
+        "trust": 1,
+        "awareness": -2
+      },
+      "note": "否认路线的抵消节点（第六节规则 1）：她收下你的话，把这件事搁下。搁下不等于想通——全篇她都不会想通。",
+      "next": "d3_n320"
+    },
+    {
+      "id": "d3_n312b",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我把门开了一条缝。",
+        "什么都没有。就是还亮着的那盏在响，老灯管，嗡嗡的。",
+        "你说怪不怪。两个人一起听，它就没了。",
+        "刚才我手心全是汗。现在好多了。你那边几点了。"
+      ],
+      "delay_ms": 3000,
+      "effects": {
+        "trust": 2,
+        "awareness": 1
+      },
+      "note": "『两个人一起听它就没了』是现象记录，不是答案。此处不解释，之后也不解释。",
+      "next": "d3_n320"
+    },
+    {
+      "id": "d3_n313",
+      "type": "system",
+      "speaker": "system",
+      "text": [
+        "通话已断开。",
+        "重新连接。对方正在输入…未发送。",
+        "重新连接。",
+        "重新连接。通话恢复。"
+      ],
+      "delay_ms": 800,
+      "note": "引擎：本节点不判任何失败。三次退出重进全部计入 reenter_3x_count；防误触条款照旧，关 App 不等于结束通话。",
+      "next": "d3_n314"
+    },
+    {
+      "id": "d3_n314",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "你刚才死了三次。",
+        "每次我都在等你。",
+        "别再那样了。"
+      ],
+      "delay_ms": 6000,
+      "effects": {
+        "awareness": 1
+      },
+      "signal": "reenter_3x",
+      "note": "本章次高峰。trust-6 已记在 c7 选项三上，此处不重复扣。她不问你为什么走，也不原谅，只说『别再那样了』。n314 不写安抚句，松弛交给紧接的 n320（规则 5）。",
+      "next": "d3_n320"
+    },
+    {
+      "id": "d3_n320",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "别管刚才那些了。你那边是不是该睡了。",
+        "跟你说个好笑的。我现在数走廊的灯，比数羊管用。羊还跳栅栏，灯就一层一层往下没。",
+        "……这句不好笑。当我没说。你睡吧，楼里我给你留着一盏。"
+      ],
+      "delay_ms": 2200,
+      "effects": {
+        "trust": 1
+      },
+      "signal": "night_window",
+      "note": "峰值后的松弛（规则 5），冷笑话故意讲砸，砸在『灯』上但不引申。她在这里把 n310 彻底放下——放下，不是解开。此后 n340 起恢复常规句长。",
+      "next": "d3_w330"
+    },
+    {
+      "id": "d3_w330",
+      "type": "wait",
+      "wait_ref": "W3-1",
+      "duration_ms": 1200000,
+      "activity": "她跟着走廊里那盏还亮着的灯走",
+      "first_line_after_wait": "我没跟到底。我跟到一半，灯自己灭了，我才发现我根本不知道自己在哪层。",
+      "next": "d3_n340"
+    },
+    {
+      "id": "d3_n340",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我没跟到底。我跟到一半，灯自己灭了，我才发现我根本不知道自己在哪层。",
+        "我站的地方离楼梯口十步。十步我数过无数遍。可我念不出这层的门牌。",
+        "上面的数字我都认得，就是连不成一个数。像眼镜片上哈了口气。"
+      ],
+      "delay_ms": 2800,
+      "effects": {
+        "awareness": 1,
+        "integrity": -1
+      },
+      "signal": "background_gt_90s",
+      "signal_line": "你这一分钟没在。我在原地多站了一分钟，咱俩扯平。",
+      "note": "认得数字、连不成层号：integrity 下滑的具体呈现，不点破。与 D1『305 的位置一直是墙』同一讲理逻辑。",
+      "next": "d3_n350"
+    },
+    {
+      "id": "d3_n350",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我回屋了。进门低头一看。",
+        "鞋边上一层灰。薄的，潮的，手指一抹一道黑印。",
+        "这种灰我认得，地下车库才有。那儿的灰不脏鞋底，脏鞋边。",
+        "我这几天连走廊都少走。何况这双，是明天面试要穿的那双。"
+      ],
+      "delay_ms": 3400,
+      "effects": {
+        "awareness": 2,
+        "integrity": -1
+      },
+      "note": "章末钩子（任务 5）：awareness +8 拆开落——n310(+3)、n312b/n314(+1)、n340(+1)、n350(+2)、n352(+1)，单点全部 ≤12，章封顶 50，保住 D5 前置。灰=车库（回收站）的第一次物理证据，她只做日常归因。",
+      "next": "d3_n352"
+    },
+    {
+      "id": "d3_n352",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我拿手背蹭了两下。蹭不掉。",
+        "明天你早点来，帮我看看它还是不是新的。要是又厚了一层，你就提醒我下一趟楼。",
+        "……我开玩笑的。下什么楼。电梯都不理我。",
+        "好了，我睡了，这次是真睡。你把电充满。"
+      ],
+      "delay_ms": 2600,
+      "effects": {
+        "trust": 1,
+        "awareness": 1
+      },
+      "signal": "screen_off",
+      "signal_line": "外面天黑了。这次我不数到六十，我直接睡。",
+      "note": "章尾。『提醒我下一趟楼』直接递到 D4 她执意下楼；『蹭不掉』被 act4 回收（d4_n435『把灰给你看』、d4_n450『我一晚上没擦掉』），别改。全章省略号 4 处：n312a/n320/n352 各一处、n313 系统节点一处，按正文约 870 字计，每千字上限 6 达标。",
+      "chapter_end": true
+    }
+  ]
+}

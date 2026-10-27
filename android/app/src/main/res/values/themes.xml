@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose 自己管颜色，框架主题只负责"没有 ActionBar + 黑底不闪白" -->
+    <style name="Theme.BackingUp" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/corridor_dark</item>
+        <item name="android:statusBarColor">@color/corridor_dark</item>
+        <item name="android:navigationBarColor">@color/corridor_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

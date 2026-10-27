@@ -1,0 +1,560 @@
+{
+  "meta": {
+    "project": "正在备份",
+    "chapter": 2,
+    "chapter_id": "d2",
+    "title": "隔壁的人",
+    "version": "0.1.0",
+    "reading_minutes": 14,
+    "real_wait_total": "7h15m",
+    "start_state": {
+      "trust": 32,
+      "awareness": 30,
+      "integrity": 94
+    },
+    "expected_exit_state": {
+      "trust": [
+        44,
+        58
+      ],
+      "awareness": [
+        31,
+        46
+      ],
+      "integrity": [
+        87,
+        89
+      ]
+    },
+    "clamp": {
+      "awareness_max_this_chapter": 46,
+      "reason": "圣经第六节规则 1：D6 之前 awareness 不得 >= 70；本章安全阀"
+    },
+    "signals_allowed": [
+      "foreground",
+      "background_gt_90s",
+      "screen_off",
+      "night_window",
+      "battery_low",
+      "power_save_on",
+      "reenter_3x",
+      "notify_denied",
+      "exact_alarm_granted",
+      "device_date",
+      "ended_in_app"
+    ],
+    "hard_rules_checked": [
+      "单条<=120字",
+      "等待可验证承接",
+      "选项命中三度量之一",
+      "不解释设定",
+      "禁用超自然词汇"
+    ],
+    "notes": [
+      "start_state.integrity=94：D1 末 97 跨天按规则 2 自然衰减 -3 后入章；章内事件 -6，主线在 d2_n210/-1、d2_n216a/-1、d2_n240/-2、d2_n250/-1、d2_n270/-1，正常游玩章末落 88。",
+      "度量预算（主线=退开+反问+非名字路线）：trust 32+1(n200)+3(c5)+1(n216a)+1(n220)+1(n245)+2(c6)+2(n263)+2(n264)+1(n270)+1(n280)+1(n281)=48；awareness 30+3(n210)+4(n240)+3(c6)+1(n271)+1(n280)=42。名字路线的 n221 +1 由 n240 的抵消记法回到 42（见 d2_n240 note）。integrity 事件合计 -6，正常游玩章末 88。",
+      "第一节七天总表 D2 写 6h45m，与等待表 W2-1(45m)+W2-2(6h30m)=7h15m 不一致；以第二节等待表为准。",
+      "docs/02 正文把'否认'陷阱标为 n260，节点图里该选项排在 n250 之后；本章按正文把陷阱选项节点 id 定为 d2_n260，夜间长睡等待顺延编号为 d2_n265。",
+      "隔壁那人那句台词（D1 n081 原句）全章只在 d2_n210 完整出现一次；第三次再现留给 D7 与《残片》结局，位置由后续章节决定。",
+      "三封灭屏信第一封=d2_l290，只能在 signal=screen_off 后送达，不可回复。"
+    ],
+    "ambience": {
+      "beds": [
+        "bed_room",
+        "hum_mains",
+        "detail_drip",
+        "anomaly_bitcrush"
+      ],
+      "default_gains": {
+        "bed_room": 0.3,
+        "hum_mains": 0.04,
+        "detail_drip": 0.1,
+        "anomaly_bitcrush": 0.02
+      },
+      "fade_ms": 4000,
+      "segments": [
+        {
+          "from": "d2_n210",
+          "to": "d2_n216b",
+          "gain": {
+            "hum_mains": 0.2,
+            "anomaly_bitcrush": 0.12,
+            "bed_room": 0.16
+          },
+          "note": "峰值一：墙里回话"
+        },
+        {
+          "from": "d2_n240",
+          "to": "d2_n245",
+          "gain": {
+            "anomaly_bitcrush": 0.18,
+            "bed_room": 0.14,
+            "detail_drip": 0.04
+          },
+          "note": "峰值二：自己收口的册子"
+        },
+        {
+          "from": "d2_l290",
+          "to": "d2_l290",
+          "gain": {
+            "bed_room": 0.1,
+            "detail_drip": 0.2,
+            "hum_mains": 0.0,
+            "anomaly_bitcrush": 0.06
+          },
+          "note": "第一封灭屏信：灭屏后声床降到底，只剩水管"
+        }
+      ],
+      "engine_note": "增益 0..1，四条声床同时播放；节点级不写 ambience，一律由本章 [from,to] 区间决定。灭屏与等待期用 ramp 字段（引擎读 duration_ms）"
+    }
+  },
+  "variables": {
+    "player_name": {
+      "source": "runtime",
+      "type": "string",
+      "set_at": "d2_c215",
+      "note": "c5 选'我有名字。你拿去。'时由玩家输入；此后每章她的第一句调用本变量（引擎拼接 {{player_name}}，圣经 c5 约定）"
+    },
+    "avoided_date_question": {
+      "source": "runtime",
+      "type": "bool",
+      "set_at": "d1_n122",
+      "note": "D1 c4 选'别查了。早点睡。'走 d1_n122 时置真；本章 d2_n261a 反噬分支依据它"
+    },
+    "d2_denied_removal": {
+      "source": "runtime",
+      "type": "bool",
+      "set_at": "d2_n260",
+      "note": "本章置真；D6 n620 据它决定'还有办法'是否只给空话"
+    }
+  },
+  "nodes": [
+    {
+      "id": "d2_n200",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "早。你先别说话，听我讲完一件事。",
+        "昨晚半宿门边一直有动静，很轻，像谁在外头挪椅子。我没敢开门。",
+        "今天早上走廊那面墙底下码着一排书。305 的东西。墙不会发货，所以不是它放的。",
+        "我抱进来几本，就几本。你别替我想，我自己已经在想了。"
+      ],
+      "delay_ms": 2000,
+      "effects": {
+        "trust": 1
+      },
+      "signal": "foreground",
+      "signal_line": "你来了。我这边书都没摆完。先坐着，不用解释你为什么现在才来。",
+      "next": "d2_n210"
+    },
+    {
+      "id": "d2_n210",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我把 305 那面墙当门，敲了三下。",
+        "你别笑。换你你也敲。",
+        "敲完第二遍我就后悔了。",
+        "后来里面有声音。不是应门。就一句，一直一句，很轻。",
+        "我明天还要早起面试。"
+      ],
+      "delay_ms": 4200,
+      "effects": {
+        "awareness": 3,
+        "integrity": -1
+      },
+      "note": "◆ 恐怖峰值一。隔壁那句台词全章仅此一次完整出现；第三次再现留给 D7 与《残片》结局。墙里回话不是复活 305，只是缺失的又一次延迟兑现。",
+      "next": "d2_c215"
+    },
+    {
+      "id": "d2_c215",
+      "type": "choices",
+      "prompt_from": "xiaoman",
+      "choices": [
+        {
+          "text": "离开那面墙。今晚别数它。",
+          "to": "d2_n216a",
+          "effects": {
+            "trust": 3
+          }
+        },
+        {
+          "text": "再敲。大声点，把里头那个叫出来。",
+          "to": "d2_n216b",
+          "effects": {
+            "trust": 1
+          }
+        },
+        {
+          "text": "我有名字。你拿去，敲一声报一声。",
+          "to": "d2_n221",
+          "effects": {
+            "trust": 10
+          }
+        }
+      ],
+      "note": "对应 docs/02 节点图 c5。第三项命中时引擎弹出名字输入框，写入 variables.player_name；D3 起每章第一句以 {{player_name}} 开头调用。"
+    },
+    {
+      "id": "d2_n216a",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "好。我退开了。",
+        "就是有一件事我得报给你：它每说一遍，声音就小一点。",
+        "省着用。它们省着用。"
+      ],
+      "delay_ms": 2400,
+      "effects": {
+        "trust": 1,
+        "integrity": -1
+      },
+      "next": "d2_n220"
+    },
+    {
+      "id": "d2_n216b",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我喊了。我把「有人在吗」喊了好几遍。",
+        "墙里那句停了。停得特别整齐，像被人按了一下。",
+        "三秒，它接着说，一个字不差。",
+        "它没被你吵到。它只是在等。"
+      ],
+      "delay_ms": 3000,
+      "effects": {
+        "awareness": 2
+      },
+      "next": "d2_n220"
+    },
+    {
+      "id": "d2_n221",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "……",
+        "{{player_name}}。",
+        "好。这下咱俩谁也不欠谁一个名字了。",
+        "我拿去用了：敲墙三下，一声你的名字，一声我的门牌。",
+        "墙里那位还是那句。它不认识你。但它现在认识我的邻居了，也算进展。"
+      ],
+      "delay_ms": 2800,
+      "effects": {
+        "awareness": 1
+      },
+      "next": "d2_n222"
+    },
+    {
+      "id": "d2_n222",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "{{player_name}}。我念了三遍，第三遍嘴瓢了，念得像家里人。",
+        "哈哈哈哈。",
+        "笑是真的，像家里人这句也是真的。你别应，你一应我就正事了。"
+      ],
+      "delay_ms": 1600,
+      "effects": {
+        "trust": 2
+      },
+      "next": "d2_n230"
+    },
+    {
+      "id": "d2_n220",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "你说巧不巧。我记住你回话的节奏了，却不知道你叫什么。",
+        "这楼里连墙都有编号。就你没有。",
+        "你在我这儿就叫「喂」。哈哈哈哈。",
+        "「喂」是真的。这楼里肯被我喊「喂」的，目前就你一个。"
+      ],
+      "delay_ms": 1400,
+      "effects": {
+        "trust": 1
+      },
+      "next": "d2_n230"
+    },
+    {
+      "id": "d2_n230",
+      "type": "wait",
+      "wait_ref": "W2-1",
+      "duration_ms": 2700000,
+      "activity": "她把 305 剩下的东西收进自己房间，在地上码成一摞",
+      "first_line_after_wait": "地上码完了一摞。我给自己留了两本，别的一本没动。我不知道这样算不算偷。",
+      "next": "d2_n240"
+    },
+    {
+      "id": "d2_n240",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "一本是旧诗集，页边上划的线跟心电图似的。",
+        "另一本你看不了了。是那种贴照片的册子。",
+        "翻到中间，往后全是空的。",
+        "不是白纸。是没有那几页。册子到那儿自己收了口，边是光的，像本来就那么短。",
+        "我把它对着光找接缝，找不到。它不叫被撕过，它叫一直就这么厚。"
+      ],
+      "delay_ms": 3600,
+      "effects": {
+        "awareness": 4,
+        "integrity": -2
+      },
+      "note": "◆ 恐怖峰值二，与 d2_n210 同属'缺失与延迟'。空册与 D1 n051'新墙不会有回声'同构。若玩家名字路线（awareness 已 +1），引擎将本节点 awareness 记为 +3，主线总账仍落 42（预算表第六节 D2 行）。",
+      "next": "d2_n245"
+    },
+    {
+      "id": "d2_n245",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我把那本合上了。合上以后我坐了很久。",
+        "有个事我想跟你说。我怕你嫌我想得多。我更怕你点头。"
+      ],
+      "delay_ms": 3000,
+      "effects": {
+        "trust": 1
+      },
+      "next": "d2_s246"
+    },
+    {
+      "id": "d2_s246",
+      "type": "silence",
+      "duration_ms": 38000,
+      "typing_indicator": true,
+      "typing_stopped_at_ms": 31000,
+      "next": "d2_n250"
+    },
+    {
+      "id": "d2_n250",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "他册子里的东西会自己没了。",
+        "那我想——",
+        "我是不是也在被删。"
+      ],
+      "delay_ms": 6000,
+      "effects": {
+        "integrity": -1
+      },
+      "next": "d2_n260"
+    },
+    {
+      "id": "d2_n260",
+      "type": "choices",
+      "prompt_from": "xiaoman",
+      "choices": [
+        {
+          "text": "册子不会半夜坐起来想自己。你会。会想的人有明天。",
+          "to": "d2_n261a",
+          "effects": {
+            "trust": 5,
+            "awareness": -8
+          }
+        },
+        {
+          "text": "可能是。这个「可能」先放桌上，我们不碰它。",
+          "to": "d2_n262",
+          "effects": {
+            "trust": 2,
+            "awareness": 5
+          }
+        },
+        {
+          "text": "你为什么这么想。说给我听。",
+          "to": "d2_n263",
+          "effects": {
+            "trust": 2,
+            "awareness": 3
+          }
+        }
+      ],
+      "note": "★ 全篇最重要陷阱选项（docs/02 正文称之为 n260）。'否认'为何成立：它每个字在她的世界里都对——册子确实不会疼，而她确实在疼，安慰踩在真实的差别上，不是敷衍，她也没听出被骗（见 d2_n261b 的接法）。它残忍在回头读：她的'明天'正是 D1 n101 走廊纸条上 307 后面那个 11 月 3 号；'会想的人有明天'在 D6 将逐字反噬。为何堵死真结局：awareness-8 压低 D6 强制提升的起点，更重的是引擎在此分支置变量 d2_denied_removal=true——玩家已亲口教她'别往下想'，D6 n620 里'还有办法'只会是空话、d2_n261a 式反噬亦无从发生，awareness 难以在 D6/D7 达到 70，《明天见》从此不可达；本选项不罚玩家（措辞里没有'你选错了'），罚的是她被安抚掉的疑心。"
+    },
+    {
+      "id": "d2_n261a",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "……",
+        "你不想说的事情，你都是这样讲的。",
+        "我说过我记住了。你昨天是不肯说，今天是舍不得说。我分得出来。",
+        "你先别说话。我缓一会儿就好。"
+      ],
+      "delay_ms": 5200,
+      "effects": {
+        "trust": -2,
+        "awareness": 4
+      },
+      "needs": {
+        "avoided_date_question": true
+      },
+      "fallback_id": "d2_n261b",
+      "note": "回收 d1_n122'你不想说的事情，你都是这样讲的。我记住了。'：只有 D1 走过回避路线的玩家在此被那句话反噬——她援引自己记下的话，看穿安抚但不戳破。",
+      "next": "d2_n264"
+    },
+    {
+      "id": "d2_n261b",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "嗯。",
+        "会想的人有明天。这句我收下了，存好。",
+        "明天面试完，我拿这句回来堵你的嘴。"
+      ],
+      "delay_ms": 3400,
+      "effects": {
+        "trust": 3
+      },
+      "note": "非回避路线的同功能节点：安慰确实落地，她没有被骗的感觉；残忍只对回头读的读者生效——她'存好'的这句，会一直被存到 11 月 3 号。 ｜语气收敛：删去第三处『×是真的』句式（本章 n220/n222 已各用一次，复现成 tic 就不是指纹了）。",
+      "next": "d2_n264"
+    },
+    {
+      "id": "d2_n262",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "好。放桌上。不碰它。",
+        "它现在就在桌上放着。我老想去看一眼，看完更累。",
+        "你现在肯定想找话安慰我。不用。肯把「可能」两个字说给我听，就是安慰了。",
+        "这楼里敢跟我说可能的人，目前一个。一个够用了。"
+      ],
+      "delay_ms": 3000,
+      "effects": {
+        "trust": 3
+      },
+      "next": "d2_n264"
+    },
+    {
+      "id": "d2_n263",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "因为那本自己收了口的册子。因为它说九遍，声音小一声。",
+        "还因为今天下午你四十五分钟没在。那四十五分钟里，我伸手掐了自己胳膊一下。",
+        "掐是掐疼了。疼的点不在胳膊。在「我原来需要掐这一下」。"
+      ],
+      "delay_ms": 3200,
+      "effects": {
+        "trust": 2
+      },
+      "next": "d2_n264"
+    },
+    {
+      "id": "d2_n264",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "天黑了。今晚走廊的灯拍到第三下才亮，平时两下就够了。",
+        "我这边有点冷。你手机上那个电量，别省，先充上。",
+        "我先睡了。你别熬夜等我——你等我也白等，我睡着以后跟墙一样。"
+      ],
+      "delay_ms": 2200,
+      "effects": {
+        "trust": 2
+      },
+      "signal": "battery_low",
+      "signal_line": "我这边开始冷了。你的电是不是不多了？",
+      "next": "d2_n265"
+    },
+    {
+      "id": "d2_n265",
+      "type": "wait",
+      "wait_ref": "W2-2",
+      "duration_ms": 23400000,
+      "activity": "她睡着了（真实夜间。长等待带告别句，见 d2_n264 末条）",
+      "first_line_after_wait": "不好意思。我睡了六个多小时。我做了个梦，梦里有人喊我，我没应。",
+      "note": "本等待期内墙里那句话永久静音；损失在 d2_n270 醒来报信时结算，此处不重复扣。",
+      "next": "d2_n270"
+    },
+    {
+      "id": "d2_n270",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "先报个平安：早上我去那面墙外站过。",
+        "没了。墙里墙外一样安静。",
+        "他没说第十遍。",
+        "我不饿，就是问一句：早饭吃什么不算丢人吧。"
+      ],
+      "delay_ms": 2600,
+      "effects": {
+        "trust": 1,
+        "integrity": -1
+      },
+      "next": "d2_n271"
+    },
+    {
+      "id": "d2_n271",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "说回那个梦。喊法不像是这楼里的。",
+        "这楼里喊人是敲三下，不等回音。梦里那个喊一声，留一段空，等够了再喊。",
+        "一声比一声近。近到最后一声，我觉得就贴着我后墙喊的。",
+        "我没应。不是我害怕——是应了就得承认有这个东西。我先欠着，今天不认。"
+      ],
+      "delay_ms": 3400,
+      "effects": {
+        "awareness": 1
+      },
+      "next": "d2_n280"
+    },
+    {
+      "id": "d2_n280",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "还有一条，我单独说给你。",
+        "梦里那个人喊我的间隔，一拍，空，一拍，空。",
+        "和你平时打字的速度一模一样。",
+        "你先别急着解释。我也不要你走。我就说一句：今天多陪我一会儿，行吗。"
+      ],
+      "delay_ms": 4000,
+      "effects": {
+        "awareness": 1,
+        "trust": 1
+      },
+      "signal": "background_gt_90s",
+      "signal_line": "你刚才走开了一下。就一下。我没喊你。我把要说的话在嘴里含回来了。",
+      "next": "d2_n281"
+    },
+    {
+      "id": "d2_n281",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "好。现在我说今天的事。",
+        "两本我留下了。诗集这本还给他——等他回来拿。",
+        "这本贴照片的我不还了。它自己都不要了，我替它收着。",
+        "我给它占了个好位置，枕头边上。那儿暖和，册子应该不知道冷，但我枕头知道。"
+      ],
+      "delay_ms": 1800,
+      "effects": {
+        "trust": 1
+      },
+      "signal": "screen_off",
+      "signal_line": "外面天黑了。今天黑里没有声音，我更不踏实。",
+      "next": "d2_l290"
+    },
+    {
+      "id": "d2_l290",
+      "type": "letter",
+      "speaker": "xiaoman",
+      "text": [
+        "这封信白天不发。白天发，就像我没事。这种事得挑一个没人的时候发。",
+        "我今天半夜醒了一次。不是被吵醒的。这楼里半夜从来没有人声。所有动静在同一秒停住，停得齐齐的。我是被这个弄醒的。",
+        "我下床，摸黑把那本空册子抱进被窝，又躺回去。躺下以后我开始数数。数到三百七十几，外面有敲门声。三下。不重，也不急，跟白天我在墙上敲的一模一样。",
+        "我没开门。我也没说是谁。这件事我不等你拿主意，我自己也没拿。我就坐在床上坐到天有点亮。",
+        "天亮以后我去敲那面墙。里面没有声了。我不难过，先跟你说一声。我就是想知道：它是说完了，还是不能说第二句了。",
+        "哦对，我梦到我妈了。梦里她在雨里等我，我还嫌她没带伞。醒来我想了半天：我好久没见过整条街了。这应该算好事，那我就当好事收着。",
+        "鞋我摆好了。衬衫还是那件。你别熬夜。这里今晚也开着。"
+      ],
+      "delay_ms": 1000,
+      "signal": "screen_off",
+      "note": "三封灭屏信·第一封（位置固定 D2）。全篇约三百八十字，≤500。只能在 signal=screen_off 之后送达，玩家无法回复。本章情感最高点：信的恐怖全部来自'整齐''三下''没有第二句'这些缺失与延迟，不点破任何机制。",
+      "chapter_end": true
+    }
+  ]
+}

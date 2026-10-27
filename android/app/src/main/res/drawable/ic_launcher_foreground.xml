@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 图标即设定：一扇关着的门，门牌 307 的抽象——一个矩形 + 把手。
+     不许出现手机、云、锁、骷髅这类"恐怖游戏封面话术"。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 门框 -->
+    <path
+        android:fillColor="#1A1C20"
+        android:pathData="M34,26h40v58h-40z" />
+    <!-- 门板 -->
+    <path
+        android:fillColor="#2B2E34"
+        android:pathData="M37,29h34v52h-34z" />
+    <!-- 把手 -->
+    <path
+        android:fillColor="#E8E3D8"
+        android:pathData="M65,54a2.4,2.4 0 1,0 0.1,0z" />
+    <!-- 门缝底下漏出来的一线光：全图标里唯一亮的地方 -->
+    <path
+        android:fillColor="#E8E3D8"
+        android:pathData="M37,79h34v2h-34z" />
+</vector>

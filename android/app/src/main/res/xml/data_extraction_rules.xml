@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  allowBackup=false 是刻意的：存档全本地、卸载即真消失（docs/02 第六节）。
+  如果 Auto Backup 把小满的存档传到云端，"她只存在你手机上"这句话就死了，
+  而且换机恢复会让 D1 的'刚醒来'变成'早就醒来过'。
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" path="." />
+    </device-transfer>
+</data-extraction-rules>

@@ -1,0 +1,77 @@
+{
+  "_contract": {
+    "authoritative": true,
+    "rule": "剧本里出现的所有 flag 必须在本表登记；未登记的 flag 由 audit_continuity.py 判 FAIL。",
+    "value_rule": "needs 的布尔判定只允许 {flag: true}/{flag: false}；'==true' 等字符串写法废弃。度量条件仍用 '>= 60'。",
+    "set_rule": "flags_set 只允许 flag 名字符串，或 'flag=value' 表示枚举值。",
+    "needs_rule": "needs 只允许 {flag: true|false} 与 {度量: '>= n'}；设备状态与时间窗走 needs_signal（如 {\"night_window\":\"01:00-04:00\"}），由引擎读取真实系统状态判定。"
+  },
+  "engine_flags": {
+    "notify_denied": "D1 n142 拒绝通知授权（系统读取）",
+    "exact_alarm_granted": "D1 n141 授予精确闹钟（系统读取）",
+    "quick_mode": "通关后解锁（系统读取）",
+    "player_silent": "D6 c610 选沉默后由计时器置位",
+    "no_reply_gt_4h": "真实未回复超 4 小时（系统读取）",
+    "missed_d3_night_window": "D3 深夜窗口未命中（按设备时钟判定）"
+  },
+  "story_flags": {
+    "avoided_date_question": {
+      "set_at": "d1_c110『别查了。早点睡。』",
+      "consumed_by": [
+        "d2_n261a",
+        "d6_n602"
+      ],
+      "note": "唯一正名；旧名 d1_avoided_date 已废"
+    },
+    "logic_route": {
+      "set_at": "d1_c060『墙不可能凭空出现。你累了。』",
+      "consumed_by": [
+        "d4_n401"
+      ]
+    },
+    "told_her_name": {
+      "set_at": "d2_c205『把自己的名字告诉她』",
+      "consumed_by": [
+        "d3-d7 首句称呼"
+      ]
+    },
+    "box_kept_closed": {
+      "set_at": "d5_c9『先别开，留到以后』",
+      "consumed_by": [
+        "d7_n710_gate"
+      ]
+    },
+    "box_opened": {
+      "set_at": "d5_c9『打开它』",
+      "consumed_by": [
+        "d7_n710_gate.fallback → d7_n710b (needs: box_opened)"
+      ]
+    },
+    "accomplice": {
+      "set_at": "d6_c620 选项 2/3",
+      "consumed_by": [
+        "d7_n740_gate"
+      ]
+    },
+    "accomplice_count": {
+      "set_at": "d6_c620（1 或 2）",
+      "consumed_by": [
+        "d7_n740.conditional_lines[0] if accomplice_count == 2"
+      ]
+    },
+    "promised_rescue": {
+      "set_at": "d6_c610『还有办法』",
+      "consumed_by": [
+        "d7_n740.conditional_lines[1] if promised_rescue"
+      ]
+    }
+  },
+  "signal_conditions": {
+    "night_window": "01:00-04:00",
+    "battery_low": "<= 20%",
+    "power_save_on": "Settings.Global low_power==1",
+    "background_gt_90s": "ProcessLifecycleOwner",
+    "screen_off": "ACTION_SCREEN_OFF",
+    "reenter_3x": "会话内 foreground 计数>=3"
+  }
+}

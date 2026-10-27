@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 楼道的灯：全篇唯一允许的两种"亮" -->
+    <color name="corridor_dark">#0B0C0E</color>
+    <color name="corridor_lamp">#E8E3D8</color>
+    <color name="ink_dim">#6B6E75</color>
+</resources>

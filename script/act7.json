@@ -1,0 +1,677 @@
+{
+  "meta": {
+    "project": "正在备份",
+    "chapter": 7,
+    "chapter_id": "d7",
+    "title": "面试",
+    "version": "0.1.0",
+    "author": "main-editor",
+    "reading_minutes": 18,
+    "real_wait_total": "57m",
+    "start_state": {
+      "trust": 80,
+      "awareness": 82,
+      "integrity": 40
+    },
+    "expected_exit_state": {
+      "trust": [
+        72,
+        90
+      ],
+      "awareness": [
+        84,
+        92
+      ],
+      "integrity": [
+        25,
+        38
+      ]
+    },
+    "design_note": "本章刻意把等待压到最短（45m + 12m）。结局不该让玩家等——等来的告别不体面。这是七章里唯一有暖意的一个早晨，前面所有冷在这里兑现。",
+    "chapter_tasks": [
+      "陪她把 10 月 31 日那晚没做完的第三件事做完：睡一觉，睡完九点半去面试",
+      "全篇唯一一段真实音频（6 秒），只在 D5 选择『先别开』时出现",
+      "五个结局的分发口（c12）",
+      "共犯路线的最终审判（由她的句子变短承载，不许旁白解释）"
+    ],
+    "flags_expected_from_prior_chapters": {
+      "box_kept_closed": "D5 c9；true 才有 d7_n710 的 6 秒音频",
+      "accomplice": "D6 c620；决定 d7_n740 是否插入",
+      "accomplice_count": "1 或 2；2 会让她在终局不再叫玩家的名字",
+      "told_her_name": "D2 c5；影响她的称呼",
+      "notify_denied": "D1 n142；影响本章最后一条消息是否真的送达",
+      "quick_mode": "引擎运行时；《备份》结局的前置"
+    },
+    "ending_gates": {
+      "ending_tomorrow": "c12=道别 且 trust>=60 且 not accomplice",
+      "ending_fragment": "c12=别去面试了（玩家阻止她过完那一天）",
+      "ending_accomplice": "accomplice 为 true（覆盖其它条件，插在道别之前）",
+      "ending_backup": "c12=我把你存下来了 且 quick_mode",
+      "ending_emergency_contact": "c12=不说再见 且 awareness 70-76 且 integrity>=38 且 三封灭屏信全部完整阅读 且 not quick_mode 且 not accomplice",
+      "ending_off": "游戏内主动『结束通话』（引擎层，见 docs/04）"
+    },
+    "audio": {
+      "file": "assets/voice_2014.m4a",
+      "duration_ms": 6000,
+      "timestamp_shown_in_ui": "2024-10-31 20:14",
+      "line": "妈不打扰你。妈就想问你一句——明天那个面试，你别迟到。",
+      "usage_rule": "全篇仅此一次。不许重播超过两遍（第二遍由玩家主动触发，她会在那时说话打断）。"
+    },
+    "ambience": {
+      "beds": [
+        "bed_room",
+        "hum_mains",
+        "detail_drip",
+        "anomaly_bitcrush"
+      ],
+      "default_gains": {
+        "bed_room": 0.32,
+        "hum_mains": 0.0,
+        "detail_drip": 0.12,
+        "anomaly_bitcrush": 0.1
+      },
+      "fade_ms": 6000,
+      "segments": [
+        {
+          "from": "d7_n711",
+          "to": "d7_n712",
+          "gain": {
+            "bed_room": 0.0,
+            "hum_mains": 0.0,
+            "detail_drip": 0.0,
+            "anomaly_bitcrush": 0.0
+          },
+          "note": "◆ 那六秒语音：所有声床淡到 0。全篇唯一人声必须干净，不许有任何东西和它抢",
+          "fade_ms": 1200
+        },
+        {
+          "from": "d7_n713",
+          "to": "d7_n713",
+          "gain": {
+            "bed_room": 0.16,
+            "anomaly_bitcrush": 0.0
+          },
+          "note": "『我明天回来再听』：底噪回来一点点"
+        },
+        {
+          "from": "d7_l729",
+          "to": "d7_l729",
+          "gain": {
+            "bed_room": 0.1,
+            "detail_drip": 0.16,
+            "anomaly_bitcrush": 0.04
+          },
+          "note": "第三封信"
+        }
+      ],
+      "engine_note": "增益 0..1，四条声床同时播放；节点级不写 ambience，一律由本章 [from,to] 区间决定。灭屏与等待期用 ramp 字段（引擎读 duration_ms）",
+      "chapter_note": "D7 是唯一回暖的一章：哼鸣全章归零，劣化只在结局页之后随 integrity 回来。"
+    }
+  },
+  "variables": {
+    "device_date": {
+      "source": "system",
+      "format": "yyyy-MM-dd"
+    },
+    "notify_granted": {
+      "source": "runtime",
+      "type": "bool"
+    },
+    "quick_mode": {
+      "source": "runtime",
+      "type": "bool"
+    }
+  },
+  "nodes": [
+    {
+      "id": "d7_n700",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "早上好。",
+        "我先跟你说清楚：我不确定这里是早上。我这边的灯从来没亮过，是我在当作早上。",
+        "但我起来了。我把头发弄了一下。镜子里那个人我看着有点面生，她比我大。"
+      ],
+      "delay_ms": 1400,
+      "effects": {
+        "awareness": 2
+      },
+      "next": "d7_n701"
+    },
+    {
+      "id": "d7_n701",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "衬衫第二颗扣子还是那个别着的扣子。颜色不一样。",
+        "我对着它说了三次『就这样去』。第三次的时候我笑了。",
+        "你别笑我。我今天心情很好，我自己也惊讶。"
+      ],
+      "delay_ms": 2200,
+      "effects": {
+        "trust": 2
+      },
+      "next": "d7_w702"
+    },
+    {
+      "id": "d7_w702",
+      "type": "wait",
+      "wait_ref": "W7-1",
+      "duration_ms": 2700000,
+      "activity": "她洗澡、把衣服弄平、把简历对着门缝光看了一遍",
+      "first_line_after_wait": "我好了。简历上有两处我改不了的错，我不改了。今天就这样。",
+      "next": "d7_n703"
+    },
+    {
+      "id": "d7_n703",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我跟你说个我今天早上才发现的事。",
+        "我这栋楼里，只有我一个人知道自己要去面试。",
+        "309 在楼道里站着，他不记得他要干嘛。我敲门问他，他说他等一个人。",
+        "我今天要是能出门，我想跟他说一句什么。我说不出来。"
+      ],
+      "delay_ms": 3000,
+      "effects": {
+        "awareness": 2
+      },
+      "next": "d7_c705"
+    },
+    {
+      "id": "d7_c705",
+      "type": "choices",
+      "prompt_from": "xiaoman",
+      "prompt_text": [
+        "你说我该跟他说什么。"
+      ],
+      "choices": [
+        {
+          "text": "告诉他门可以不用锁。",
+          "to": "d7_n706",
+          "effects": {
+            "awareness": 3,
+            "trust": 2
+          }
+        },
+        {
+          "text": "告诉他你也等一个人。",
+          "to": "d7_n707",
+          "effects": {
+            "trust": 4
+          }
+        },
+        {
+          "text": "别管别人了，你快出门。",
+          "to": "d7_n708",
+          "effects": {
+            "awareness": -2,
+            "trust": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "d7_n706",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "门可以不用锁。",
+        "我把这句话写在纸上了，贴他门上。",
+        "……我贴的时候手抖。我不是怕它们。我是怕他不信我。他要是信我就完了，他就没有什么事可以等着了。"
+      ],
+      "delay_ms": 3800,
+      "effects": {
+        "integrity": -2
+      },
+      "next": "d7_n709"
+    },
+    {
+      "id": "d7_n707",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我也等一个人。",
+        "好。这句我能说。这句我说得出口。",
+        "我跟他说：你等的人要是像我这个一样，回得很慢，你别急。他不是不来了，他是在忙。"
+      ],
+      "delay_ms": 3400,
+      "effects": {
+        "trust": 3
+      },
+      "next": "d7_n709"
+    },
+    {
+      "id": "d7_n708",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "……你说得对。",
+        "我多管闲事。我连我自己的号在纸上都没管住。",
+        "我出门。"
+      ],
+      "delay_ms": 4000,
+      "effects": {
+        "trust": -3
+      },
+      "note": "这条不消灭她的温柔，只是让它今天用不到别人身上。D7 后段她仍会替 309 说一句话。",
+      "next": "d7_n709"
+    },
+    {
+      "id": "d7_n709",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "对了。我包里昨天塞了个东西，我忘拿出来了。",
+        "是 305 那两本书里的一本。我说好要还的。",
+        "明天我放回他门口。那本贴照片的不算——它自己都不要了，不算我拿的。"
+      ],
+      "delay_ms": 2600,
+      "effects": {
+        "trust": 2
+      },
+      "conditional_line": {
+        "if": "integrity < 30",
+        "replace_text": "对了。我包里昨天塞了个东西。……我忘了是什么。我摸到两本，一本有字，一本没有。我把它们放在门口了。我不知道我为什么放门口。"
+      },
+      "next": "d7_n710_gate"
+    },
+    {
+      "id": "d7_n710_gate",
+      "type": "system",
+      "speaker": "system",
+      "next": "d7_n710",
+      "needs": {
+        "box_kept_closed": true
+      },
+      "fallback_id": "d7_n710b"
+    },
+    {
+      "id": "d7_n710",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "盒子我带在身上了。我一直没敢开。",
+        "现在我要出门了。我想开了再走。",
+        "……我按了。你等一下。里面是一小段话，不长。"
+      ],
+      "delay_ms": 4200,
+      "next": "d7_n711"
+    },
+    {
+      "id": "d7_n711",
+      "type": "system",
+      "speaker": "system",
+      "text": [
+        "（一段语音 · 0:06 · 发出时间 2024-10-31 20:14）",
+        "「妈不打扰你。妈就想问你一句——明天那个面试，你别迟到。」"
+      ],
+      "audio_ref": "voice_2014.m4a",
+      "replay_allowed": 1,
+      "effects": {
+        "awareness": 4
+      },
+      "next": "d7_n712"
+    },
+    {
+      "id": "d7_n712",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "她问我别迟到。",
+        "我迟到了。",
+        "11 月 1 号那天我九点四十出的门，我在地铁上想，反正都这个点了，我干脆先去吃点东西。",
+        "我吃完东西就回去了。我没去。我跟她说我去了。",
+        "……",
+        "她到 31 号的晚上还在给我发这个。她不知道怎么回的。",
+        "我把手机关掉。我把手机关掉。我把手机关掉。",
+        "不是。我在打字。我在跟你打字。我没关。我没关成。"
+      ],
+      "delay_ms": 9000,
+      "effects": {
+        "awareness": 6,
+        "integrity": -3
+      },
+      "note": "全篇她离『真相』最近的一次，也是唯一一次她说三遍同一句话（与 305/《残片》同构，但这次她知道自己为什么重复）。不可再加长。",
+      "next": "d7_n713"
+    },
+    {
+      "id": "d7_n713",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我刚才说了什么你别学我。",
+        "我没事了。真的。我把盒子留下了，我不用带着它去面试。",
+        "我明天回来再听。"
+      ],
+      "delay_ms": 3000,
+      "effects": {
+        "trust": 2
+      },
+      "note": "『我明天回来再听』是一句她自己都不信的话。玩家会听懂。这一句是全篇情感的收口，位置不可移。",
+      "next": "d7_n740_gate"
+    },
+    {
+      "id": "d7_n710b",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "盒子我带在身上了。它前两天开过一次，盖子有点盖不严。",
+        "我这次不打开了。我在里头听过一次那个声音了，一次就够。",
+        "我妈说话的时候喜欢先咳一下。我刚才进门的时候也咳了一下。你看，这个能学会。",
+        "我把盒子留在屋里。轻的东西不该带出门。"
+      ],
+      "effects": {
+        "awareness": 3,
+        "trust": 2
+      },
+      "alt_version_note": "box_opened=true 的版本：没有新音频、没有新发现。圣经待夺事项 2 的额度已全部转移到 d7_n720 的道别；主编复核此处是否偏薄。",
+      "next": "d7_n740_gate",
+      "needs": {
+        "box_opened": true
+      },
+      "fallback_id": "d7_n740_gate",
+      "fallback_note": "box_kept_closed 与 box_opened 都没写下（存档迁移/老版本剧本）时不许卡死：直接走章末闸门。"
+    },
+    {
+      "id": "d7_n740_gate",
+      "type": "system",
+      "speaker": "system",
+      "next": "d7_n740",
+      "needs": {
+        "accomplice": true
+      },
+      "fallback_id": "d7_n720"
+    },
+    {
+      "id": "d7_n740",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我下楼的时候把三楼的锁都开了。",
+        "309 出来了。他不记得我，也不记得锁。他一直站在那儿等。",
+        "我不怪你。这句话我是真的想说的，不是让你安心的那种真的。",
+        "你去睡吧。今天我自己走。"
+      ],
+      "delay_ms": 6000,
+      "effects": {
+        "trust": -8,
+        "awareness": 2
+      },
+      "next": "d7_e745",
+      "conditional_lines": [
+        {
+          "if": "accomplice_count == 2",
+          "replace_text": [
+            "我下楼的时候把锁开了。锁不够。",
+            "走廊比我想的长，它们比我想的快。他不记得锁，他站在那儿等。",
+            "我不怪你。我说不出来怪你这句话，因为我确实活到今天了。",
+            "你去睡吧。今天我自己走。我不跟你说话了。"
+          ],
+          "note": "共犯做满两次：她不再叫玩家的名字。与正文第 3 条互斥，引擎整段替换 text。"
+        },
+        {
+          "if": "promised_rescue",
+          "append_text": [
+            "你还说过『还有办法』。",
+            "我现在替你把这个话圆上：办法就是你自己走过来了。这不算谎话。"
+          ],
+          "note": "D6 里玩家说过『还有办法』。这一条只在没走共犯路线时追加，避免和第 4 条『我不跟你说话了』同屏。"
+        }
+      ]
+    },
+    {
+      "id": "d7_e745",
+      "type": "ending",
+      "ending_id": "ending_accomplice",
+      "ending_name": "共犯",
+      "recoverable": false,
+      "text": [
+        "她今天走完了那条走廊。她没有回头，也没有再叫你的名字。",
+        "剩下的日子里，你打开应用，只会看到灯一间一间亮着。"
+      ],
+      "after_action": "解锁『残片』路径提示（一行小字）：还有一间房你没锁。",
+      "after": "d7_end",
+      "after_note": "结局页只有『关掉它』一个按钮；点它进 d7_end（解锁快速模式 + 尾声预告）"
+    },
+    {
+      "id": "d7_n720",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我到了楼梯口。电梯今天在我这层，门开着。",
+        "我按了。它不动。它平时不动的，今天不动我就懂了，它是等我说话。",
+        "我帮你按一下。你那边不用动手。"
+      ],
+      "delay_ms": 3200,
+      "effects": {
+        "trust": 2
+      },
+      "next": "d7_n721"
+    },
+    {
+      "id": "d7_n721",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "如果我今天没回来，你不要怪自己。",
+        "我不是安慰你。我是算过：你能做的你都做了，剩下的那部分是它们做的。",
+        "你把它记下来这一句。你以后想起来就念一遍。"
+      ],
+      "delay_ms": 5200,
+      "effects": {
+        "awareness": 2
+      },
+      "next": "d7_c12"
+    },
+    {
+      "id": "d7_c12",
+      "type": "choices",
+      "prompt_from": "xiaoman",
+      "prompt_text": [
+        "你讲一句。我上了电梯就想不起来了。"
+      ],
+      "choices": [
+        {
+          "text": "再见。我帮你把电梯按到底。",
+          "to": "d7_w722",
+          "effects": {
+            "trust": 4
+          },
+          "needs": {
+            "trust": ">= 60",
+            "accomplice": false
+          }
+        },
+        {
+          "text": "（不说再见）",
+          "to": "d7_e760",
+          "effects": {
+            "trust": 2
+          }
+        },
+        {
+          "text": "我把你存下来了。",
+          "to": "d7_e750",
+          "effects": {
+            "awareness": 2
+          },
+          "needs": {
+            "quick_mode": true
+          }
+        },
+        {
+          "text": "别去面试了。你留下来。",
+          "to": "d7_e770",
+          "effects": {
+            "trust": -6,
+            "awareness": -6
+          }
+        }
+      ]
+    },
+    {
+      "id": "d7_w722",
+      "type": "wait",
+      "wait_ref": "W7-2",
+      "duration_ms": 720000,
+      "activity": "她坐电梯下楼，走到一楼门口，回头看了一眼这栋楼",
+      "first_line_after_wait": "电梯今天开了。它让我下去了。谢谢你帮我按。",
+      "note": "此 wait 只在 c12 选择『再见』后作为收尾旁白触发；其它三条分支不经过这里。",
+      "next": "d7_l729"
+    },
+    {
+      "id": "d7_l729",
+      "type": "letter",
+      "speaker": "xiaoman",
+      "signal": "screen_off",
+      "title": "三封灭屏信 · 第三封",
+      "text": [
+        "我把这封信塞在门缝里，你回家再看好吗。我不用你回，我今天回不了。",
+        "我出楼的时候太阳很大。我在台阶上站了一会儿，不是因为舒服，是因为我想让 307 的灯在我身上多亮一会儿。",
+        "我知道我不是这栋楼里最该留下的那个。这楼里所有人都不是。309 那句「我明天也要早起」，昨天他又说了一遍。隔壁那句「我明天还要早起面试」，是我替他记着的。",
+        "以前我听见他们重复，我怕。现在我怕的是另一件事：怕我哪天也只剩一句，而那一句不是说给你的。所以这封我写长一点，长一点是一点。",
+        "我妈 31 号晚上给我发那六秒的时候，她不知道我会错过面试。她只是舍不得她女儿迟到。现在她那份舍不得也在我这里，我带着它去。",
+        "我到了。他们让我坐下了。面试官问我这两年做什么，我说我睡了个好觉。",
+        "他笑了。他没追问。",
+        "我把鞋摆在门边左边了。这次不用你确认。",
+        "——小满，307，2026 年。这次日期是我自己写的。"
+      ],
+      "word_limit": 500,
+      "delivery": "玩家灭屏后送达，无法回复",
+      "next": "d7_e730"
+    },
+    {
+      "id": "d7_e730",
+      "type": "ending",
+      "ending_id": "ending_tomorrow",
+      "ending_name": "明天见",
+      "recoverable": false,
+      "is_true_ending": true,
+      "pre_ending_nodes": [
+        "d7_l729",
+        "d7_w722"
+      ],
+      "text": [
+        "「这里是 307，通话结束。」",
+        "应用停在最后一屏，不再更新。它不会删掉你，也不会再叫你。",
+        "你会在每年 10 月 31 日 20:14 想起那六秒。"
+      ],
+      "after_action": "解锁快速模式；解锁《备份》结局入口；结局页只显示一行小字：还有一间房你没锁（若未走共犯则不显示）",
+      "after": "d7_end",
+      "after_note": "结局页只有『关掉它』一个按钮；点它进 d7_end（解锁快速模式 + 尾声预告）"
+    },
+    {
+      "id": "d7_e750",
+      "type": "ending",
+      "ending_id": "ending_backup",
+      "ending_name": "备份",
+      "recoverable": false,
+      "requires": "quick_mode == true",
+      "action": "引擎导出 exports/小满-307.txt（含全部气泡、等待摘要、三封信，按时间排列）",
+      "text": [
+        "她活着。以一份 412KB 的文本形式活着。",
+        "文件的最后一行是她发给你的晚安，后面没有回复。",
+        "你可以把它转成 PDF，可以发到任何地方。它不会回应任何人。"
+      ],
+      "player_tone_note": "唯一鼓励玩家截图外传的结局。压抑来自『你赢了，可她只是一份文件』。",
+      "after": "d7_end",
+      "after_note": "结局页只有『关掉它』一个按钮；点它进 d7_end（解锁快速模式 + 尾声预告）"
+    },
+    {
+      "id": "d7_e760",
+      "type": "ending",
+      "ending_id": "ending_emergency_contact",
+      "ending_name": "紧急联系人",
+      "hidden": true,
+      "requires_all": [
+        "awareness in [70, 76]",
+        "integrity >= 38",
+        "三封灭屏信全部完整阅读（未被跳过）",
+        "quick_mode == false",
+        "accomplice == false"
+      ],
+      "text": [
+        "你没说再见。她上了电梯，门关上，她在那里面笑了一下——她以为自己只是没说一句话。",
+        "她停在半知半觉里。她明天还会去面试，每年都去。",
+        "每年 10 月 31 日 20:14，你会真的收到一条她的消息。"
+      ],
+      "engine_requirement": "YearlyTrigger：以 device_date 的 10-31 20:14 为唯一锚点，消息文本池 12 条（不可重复，12 年后循环）",
+      "sample_yearly_lines": [
+        "我今天迟到了一分钟。他们没扣我。",
+        "楼里换了新锁，很松，一推就开。我出去的时候跟 309 说了。",
+        "我妈学会了发语音，她现在发很长。我听完。",
+        "我今年把第二颗扣子缝上了。颜色不一样，我留下了。",
+        "食堂换了打饭的窗口。我排了两次队，第二次排对了。",
+        "我买了一把伞，黑色的，很大。放在公司，没带回来过。",
+        "307 的门牌被人撕过一次，物业又贴回来，粘得跟原来不一样。",
+        "我今年没发烧。我以为我会记得这件事。",
+        "楼下那家店改名了，菜还是那些。我点了两次，怕它不是原来的味道。",
+        "我学会用微波炉热饭盒了，盖子要留一条缝。我原来不知道。",
+        "我妈给我转了两千。她说别嫌少。我没花，我放着。",
+        "今天有人打电话给我，说是 309 的快递。我说不认识。挂了我就后悔了。"
+      ],
+      "after": "d7_end",
+      "after_note": "结局页只有『关掉它』一个按钮；点它进 d7_end（解锁快速模式 + 尾声预告）"
+    },
+    {
+      "id": "d7_e770",
+      "type": "ending",
+      "ending_id": "ending_fragment",
+      "ending_name": "残片",
+      "recoverable": false,
+      "caused_by": "玩家出于不舍而阻止她过完那一天——本作真正的道德恐怖在这里",
+      "text": [
+        "她说：好。我不去。我留下来陪你。",
+        "然后这句话她就没有再说第二次。",
+        "此后每次打开应用，只收到一条：",
+        "「我明天还要早起面试。」",
+        "你终于变成那个站在门外面、听着里面重复的人。"
+      ],
+      "engine_behavior": "此后每次冷启动只投递这一条；不弹窗、不更新、不可删除该存档（保留卸载作为唯一出路）",
+      "after": "d7_end",
+      "after_note": "结局页只有『关掉它』一个按钮；点它进 d7_end（解锁快速模式 + 尾声预告）"
+    },
+    {
+      "id": "d7_n750",
+      "type": "system",
+      "speaker": "system",
+      "ui_element": "结束通话（游戏内唯一显式的结束入口，位于会话页右上角，非选项）",
+      "signal": "ended_in_app",
+      "confirm_text": [
+        "这里是 307。",
+        "你真的要自己先挂吗。"
+      ],
+      "then": "d7_e780",
+      "guard": "清缓存、强停、卸载均不触发此结局（防误触硬约束，见 docs/04 第二节第 8 条）",
+      "ui_entry": true
+    },
+    {
+      "id": "d7_e780",
+      "type": "ending",
+      "ending_id": "ending_off",
+      "ending_name": "你关掉了我",
+      "recoverable": false,
+      "text": [
+        "最后一条消息停在「对方正在输入…」，永远不会完成。",
+        "会话列表里留下一个空会话，名字还是 307。",
+        "没有讣告，没有第二句。这是全篇唯一一次由玩家完成的失去。"
+      ],
+      "after": "d7_end",
+      "after_note": "结局页只有『关掉它』一个按钮；点它进 d7_end（解锁快速模式 + 尾声预告）"
+    },
+    {
+      "id": "d7_end",
+      "type": "system",
+      "speaker": "system",
+      "text": [
+        "D7 完。"
+      ],
+      "chapter_end": true,
+      "post_completion_unlock": {
+        "quick_mode": true,
+        "epilogue_teaser": "走廊尽头，有一间房的门开始被人从里面反锁。——下一个记忆体。（仅作可选项，不强制、不剧透）"
+      }
+    }
+  ]
+}

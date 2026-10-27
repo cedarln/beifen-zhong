@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  权限清单即隐私宣言：这里没有 INTERNET。
+  《正在备份》的设定是"她只存在于这台手机的本地缓存里"，
+  所以整包不申请网络权限——不是忘了加，是不能加。
+  也不申请 READ_NOTIFICATIONS / 无障碍 / 通讯录：小满能感知的一切
+  都来自 docs/01 感知映射表里那些合法设备信号（前台、灭屏、省电、电量、日期）。
+
+  诚实条：装完包后 `aapt2 dump badging` 会额外看到四条我们没写的权限——
+  WAKE_LOCK / ACCESS_NETWORK_STATE / FOREGROUND_SERVICE 由 androidx.work:work-runtime
+  的清单合并进来（重启补投靠它），第四条 `cn.linan.backingup.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`
+  是 androidx.core 给"运行期注册的接收器"自动加的**自定义签名级**权限，只发给这个包自己，
+  不给外部 App 任何能力。ACCESS_NETWORK_STATE 只是"能不能读到网络连接状态"，
+  它不给任何出网能力；我们的代码从未查询它，WorkManager 也没给我们的任务加网络约束。
+  想删干净得验证补投链路，v0.1.0 不动它，先把话说在这儿。
+  （反过来，原来这里还写着 VIBRATE——代码里一次都没调用过震动，而界面承诺"不响铃、不震动"，
+  所以删了：一条用不上的权限不是"以防万一"，是对那句承诺的伪造。）
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- D1 的授权引导：她那句"你给了我一个能叫醒你的权利" -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 只申请 SCHEDULE_EXACT_ALARM（用户可在系统设置里撤），**不**申请 USE_EXACT_ALARM：
+         一是商店政策只放行时钟/日历类 App 用它，二是它一旦声明就无条件生效，
+         d1_n140 那个"你给了我一个能叫醒你的权利"的授权分支会当场变成假动作——
+         剧情里她请求的东西，代码里必须真的可能被拒绝。
+         降级路径（这台设备把精确唤醒撤了）写在 ReminderScheduler.schedule()：
+         那时改用 setAndAllowWhileIdle——它不要精确权限，到点照样醒，只是不保证准时。
+         她可能迟到，不是她的问题。 -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- 22 小时等待要跨 Doze。这是引导用户去设置里点一下的权限，不申请就静默失效 -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- 重启后 catchUp()：逾期不补投 = 玩家以为游戏坏了 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="false"
+        android:theme="@style/Theme.BackingUp"
+        tools:targetApi="34">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 冷启动与开机后各做一次补投，见 docs/04 第四节。
+             不声明 LOCKED_BOOT_COMPLETED：那要求 directBootAware + 设备加密存储，
+             而存档在凭据加密区里，解锁之前读不到——写上只会得到一个永远不来的承诺。 -->
+        <receiver
+            android:name=".sched.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 闹钟的落点。只由自己的 PendingIntent.getBroadcast 触发，
+             所以 exported=false：别的 App 伪造不了"她来找你了"。 -->
+        <receiver
+            android:name=".sched.WakeReceiver"
+            android:enabled="true"
+            android:exported="false" />
+    </application>
+</manifest>

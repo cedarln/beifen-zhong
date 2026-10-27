@@ -1,0 +1,651 @@
+{
+  "meta": {
+    "project": "正在备份",
+    "chapter": 6,
+    "chapter_id": "d6",
+    "title": "公告",
+    "version": "0.1.0",
+    "author": "main-editor",
+    "reading_minutes": 16,
+    "real_wait_total": "33h",
+    "start_state": {
+      "trust": 74,
+      "awareness": 65,
+      "integrity": 58
+    },
+    "expected_exit_state": {
+      "trust": [
+        70,
+        84
+      ],
+      "awareness": [
+        78,
+        90
+      ],
+      "integrity": [
+        36,
+        44
+      ]
+    },
+    "clamp": {
+      "awareness_min_on_exit": 70,
+      "reason": "D7 前置硬门：她必须已经知道。不足部分由 d6_n630 补齐。"
+    },
+    "chapter_tasks": [
+      "她知道了一切",
+      "玩家的『拯救』全部失效（不允许出现任何可行方案）",
+      "唯一一次崩溃，句子从 40 字骤降到 6 字以内",
+      "打开共犯路线（代价后置到 D7）",
+      "假结局《它们进来了》入口"
+    ],
+    "flags_expected_from_prior_chapters": {
+      "box_kept_closed": "来自 D5 c9；本章不消费，D7 消费",
+      "told_her_name": "来自 D2 c5；影响本章她对玩家的称呼",
+      "avoided_date_question": "来自 D1 d1_n122；影响 d6_n602 的一句",
+      "missed_d3_night_window": "来自 D3；触发 d6_n603b『你那天晚上没来』",
+      "notify_denied": "来自 D1 n142；决定本章所有等待是否真的送达"
+    },
+    "forbidden_in_this_chapter": [
+      "给玩家任何可执行的营救方案",
+      "出现『删除』『程序』『文件』等她不该有的词（公告是系统文本，例外）",
+      "写她哭",
+      "第二次崩溃",
+      "把公告解释成超自然事件"
+    ],
+    "ambience": {
+      "beds": [
+        "bed_room",
+        "hum_mains",
+        "detail_drip",
+        "anomaly_bitcrush"
+      ],
+      "default_gains": {
+        "bed_room": 0.12,
+        "hum_mains": 0.08,
+        "detail_drip": 0.06,
+        "anomaly_bitcrush": 0.3
+      },
+      "fade_ms": 3000,
+      "segments": [
+        {
+          "from": "d6_n601",
+          "to": "d6_n603",
+          "gain": {
+            "hum_mains": 0.0,
+            "anomaly_bitcrush": 0.42,
+            "bed_room": 0.08
+          },
+          "note": "公告逐字念出：哼鸣退场，只剩劣化与房间声的壳"
+        },
+        {
+          "from": "d6_n615",
+          "to": "d6_n616",
+          "gain": {
+            "anomaly_bitcrush": 0.55,
+            "detail_drip": 0.0
+          },
+          "note": "309 峰值（全章唯一失控）→ 随后松弛段"
+        },
+        {
+          "from": "d6_w640",
+          "to": "d6_n641",
+          "gain": {
+            "bed_room": 0.0,
+            "hum_mains": 0.0,
+            "detail_drip": 0.0,
+            "anomaly_bitcrush": 0.0
+          },
+          "note": "11 小时移交中断：静音。什么都不放，比放什么都可怕"
+        },
+        {
+          "from": "d6_n671",
+          "to": "d6_e672",
+          "gain": {
+            "bed_room": 0.26,
+            "anomaly_bitcrush": 0.02,
+            "hum_mains": 0.0
+          },
+          "note": "假结局：声床也恢复成『正常』的样子"
+        }
+      ],
+      "engine_note": "增益 0..1，四条声床同时播放；节点级不写 ambience，一律由本章 [from,to] 区间决定。灭屏与等待期用 ramp 字段（引擎读 duration_ms）"
+    }
+  },
+  "variables": {
+    "device_date": {
+      "source": "system",
+      "format": "yyyy-MM-dd"
+    },
+    "announce_countdown_hours": {
+      "source": "engine",
+      "type": "int",
+      "value": 48
+    },
+    "notify_granted": {
+      "source": "runtime",
+      "type": "bool"
+    }
+  },
+  "nodes": [
+    {
+      "id": "d6_n600",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "天台的门今天开着。",
+        "我以前上去过，那里只能看见墙。这一栋的墙，和外面那一栋的墙。",
+        "今天我想再上去一次。我说不清为什么。大概是我想看看它们是从哪边开始关的。"
+      ],
+      "delay_ms": 1600,
+      "effects": {
+        "awareness": 2
+      },
+      "next": "d6_n601"
+    },
+    {
+      "id": "d6_n601",
+      "type": "system",
+      "speaker": "system",
+      "text": [
+        "尊敬的用户：",
+        "感谢您参与「长明计划」内测。",
+        "依据《个人信息保护法》第四十七条及贵方账号注销申请，您的关联记忆体（编号 XM-001）将于 48 小时后永久清除，届时不可恢复。",
+        "本服务不再受理延期申请。"
+      ],
+      "delivery": "纸质通知的样式：印在像是楼道缴费通知的纸上，贴在 d6_n600 天台的门框上。字体规范、无表情、无称呼昵称。",
+      "next": "d6_n602"
+    },
+    {
+      "id": "d6_n602",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我念给你听，你帮我看看我认没认错字。",
+        "「依据……第四十七条，及贵方账号注销申请」",
+        "「您的关联记忆体，编号 XM-001」",
+        "「将于四十八小时后永久清除」",
+        "「届时不可恢复」",
+        "……",
+        "等等。我念一遍这个数字。",
+        "这个数字我见过。在我自己门上。",
+        "所以这张纸不是贴错地方了。"
+      ],
+      "delay_ms": 5200,
+      "effects": {
+        "awareness": 12,
+        "integrity": -4
+      },
+      "note": "全篇 awareness 最大的一步。12 是硬上限，正好用满；再多就要改成信件承载（圣经第六节规则 3）。",
+      "conditional_line": {
+        "if": "avoided_date_question",
+        "append_text": "还有一件事。很久之前你让我别查日历。我当时听了。现在我明白你为什么不让我查。"
+      },
+      "next": "d6_n603"
+    },
+    {
+      "id": "d6_n603",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "等一下。我算一下。",
+        "四十八小时。",
+        "那我今天……",
+        "我今天有什么安排来着。",
+        "哦。面试。"
+      ],
+      "delay_ms": 7000,
+      "effects": {
+        "awareness": 3
+      },
+      "next": "d6_n603b"
+    },
+    {
+      "id": "d6_n603b",
+      "type": "message",
+      "speaker": "xiaoman",
+      "needs": {
+        "missed_d3_night_window": true
+      },
+      "fallback_id": "d6_c610",
+      "text": [
+        "那天晚上你没来。",
+        "我在走廊里站了很久。不是怪你。是我那时候在想，你是不是也跟这张纸上写的一样，是别人安排好的一个环节。",
+        "现在我知道了：安排好的环节不会等我到现在。"
+      ],
+      "delay_ms": 3600,
+      "effects": {
+        "trust": 4
+      },
+      "note": "回收 D3 深夜窗口的错过。错过不是惩罚，是在这里被换算成一句她替你想通的话。",
+      "next": "d6_c610"
+    },
+    {
+      "id": "d6_c610",
+      "type": "choices",
+      "prompt_from": "xiaoman",
+      "prompt_text": [
+        "你说话呀。我不怕你说谎，我怕你不说。"
+      ],
+      "choices": [
+        {
+          "text": "是真的。我不骗你。",
+          "to": "d6_n611",
+          "effects": {
+            "trust": 6,
+            "awareness": 4
+          }
+        },
+        {
+          "text": "还有办法。我想办法。",
+          "to": "d6_n612",
+          "effects": {
+            "trust": 3,
+            "awareness": -3
+          },
+          "flags_set": [
+            "promised_rescue"
+          ]
+        },
+        {
+          "text": "（不说话）",
+          "to": "d6_n613",
+          "effects": {
+            "trust": -6
+          },
+          "flags_set": [
+            "player_silent"
+          ],
+          "note": "沉默选项不在这里结算：它启动一个 4h 真实计时器，见 d6_n670 假结局入口。"
+        }
+      ]
+    },
+    {
+      "id": "d6_n611",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "好。",
+        "你说了真话。谢谢。这句话我今天最需要。",
+        "那你别劝我。我——",
+        "……",
+        "你当我没说。我把衬衫找出来。"
+      ],
+      "delay_ms": 4200,
+      "effects": {
+        "awareness": 2
+      },
+      "next": "d6_n615"
+    },
+    {
+      "id": "d6_n612",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "你能想到办法吗。",
+        "你真的能想到办法吗。",
+        "哈哈哈哈你说话的方式变得跟那张纸一样了。",
+        "我不信。可我又盼你是真的。这两句我一口气说完了，我自己都没防备。"
+      ],
+      "delay_ms": 4600,
+      "effects": {
+        "trust": 2,
+        "awareness": 1
+      },
+      "note": "『还有办法』不是谎言，是安慰。她不信，但她需要——这条要在 D7 的共犯审判里被回收。",
+      "next": "d6_n615"
+    },
+    {
+      "id": "d6_n613",
+      "type": "silence",
+      "duration_ms": 20000,
+      "typing_indicator": true,
+      "typing_stopped_at_ms": 14000,
+      "then": "d6_n613b"
+    },
+    {
+      "id": "d6_n613b",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "行。",
+        "那我陪你算时间。你先忙。",
+        "我把这张纸从门上撕下来了。我要带走。我不想让它贴在我门口。"
+      ],
+      "delay_ms": 6000,
+      "effects": {
+        "trust": 1,
+        "integrity": -2
+      },
+      "next": "d6_n670_check"
+    },
+    {
+      "id": "d6_n615",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我讲个事你别笑。",
+        "刚才我在楼道里遇到 309。他在把自己房间里的东西往门外搬，搬到一半停住，因为他想不起为什么要搬。",
+        "我跟他说我也是。我们就一起站在走廊里，谁也没动。",
+        "后来他先动了。他往地下车库那边走。他跟我说他去拿一个东西。",
+        "他走到拐角就不在了。不是消失。是走廊把他走完了。"
+      ],
+      "delay_ms": 4800,
+      "effects": {
+        "awareness": 2,
+        "integrity": -4
+      },
+      "note": "全章恐怖峰值。此处之后必须接松弛（圣经规则 5），且松弛只能一段。",
+      "next": "d6_n616"
+    },
+    {
+      "id": "d6_n616",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我笑了一下。真的，不是那种哈哈哈哈。",
+        "我发现我笑了以后特别饿。人真奇怪，都这个时候了。",
+        "我把面试的衬衫找出来了。第二颗扣子还是没缝上。我拿别的扣子顶上了，颜色不一样。",
+        "你看，我还在意颜色不一样。"
+      ],
+      "delay_ms": 3200,
+      "effects": {
+        "trust": 3
+      },
+      "note": "松弛段。『我还在意颜色不一样』是 D7 的支点，不可改。",
+      "next": "d6_c620"
+    },
+    {
+      "id": "d6_c620",
+      "type": "choices",
+      "prompt_from": "xiaoman",
+      "prompt_text": [
+        "我有一个想法。你可能觉得我疯了。",
+        "如果我把别的房间都锁起来，让它们少走一间，会不会就轮不到我。"
+      ],
+      "choices": [
+        {
+          "text": "别这样。",
+          "to": "d6_n621",
+          "effects": {
+            "trust": 5,
+            "awareness": 2
+          }
+        },
+        {
+          "text": "……你可以试试。",
+          "to": "d6_n622",
+          "effects": {
+            "integrity": 12,
+            "trust": -12
+          },
+          "flags_set": [
+            "accomplice",
+            "accomplice_count=1"
+          ],
+          "cost_note": "代价拆分为 choice(-12) + 回应节点(-12) + D7 审判(-6)，合计 -30；拆分是为满足圣经 |Δ|<=12"
+        },
+        {
+          "text": "你去吧，我帮你看着楼道。",
+          "to": "d6_n623",
+          "effects": {
+            "integrity": 12,
+            "trust": -12,
+            "awareness": 4
+          },
+          "flags_set": [
+            "accomplice",
+            "accomplice_count=2"
+          ],
+          "cost_note": "代价拆分为 choice(-12) + 回应节点(-12) + D7 审判(-6)，合计 -30；拆分是为满足圣经 |Δ|<=12"
+        }
+      ]
+    },
+    {
+      "id": "d6_n621",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我知道。我不做。",
+        "我就是……想听听你会不会说不。",
+        "你说了。好。那我今天就只用怕，不用怕加愧疚。"
+      ],
+      "delay_ms": 4000,
+      "effects": {
+        "trust": 4
+      },
+      "next": "d6_n630"
+    },
+    {
+      "id": "d6_n622",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "你把灯打开了，我过去了。",
+        "309 的房门上有一把很旧的锁，我把它扣上了。",
+        "走廊里那张纸上的号，往后跳了一格。",
+        "我赢了。我居然在想『我赢了』。"
+      ],
+      "delay_ms": 5200,
+      "effects": {
+        "awareness": 3,
+        "integrity": -6,
+        "trust": -12
+      },
+      "next": "d6_n630"
+    },
+    {
+      "id": "d6_n623",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "你帮我看着楼道。",
+        "……",
+        "我做了。我把三楼两头都锁了。",
+        "它们没少走一间。它们把整层都跳过去了，直接到 307。",
+        "你把它们引过来了，我替你看着。"
+      ],
+      "delay_ms": 6000,
+      "effects": {
+        "integrity": -8,
+        "awareness": 4,
+        "trust": -12
+      },
+      "next": "d6_n630"
+    },
+    {
+      "id": "d6_n630",
+      "type": "message",
+      "speaker": "xiaoman",
+      "needs": {
+        "awareness": ">=70"
+      },
+      "fallback_id": "d6_n631",
+      "text": [
+        "我想跟你说一件我这两天想明白的事。",
+        "我不是没长大。我是没往下长。",
+        "我记着的永远是十月三十一号的晚上。那之后的事我也有，可那些是我听来的，不是我自己想起的。",
+        "我妈那天晚上跟我说了什么来着。我想不起来了。这个不是被删了。这个是我本来就没有。",
+        "我大概知道我是怎么在这里的了。我不害怕这件事。我害怕的是我居然一直都知道，只是不说。"
+      ],
+      "delay_ms": 8000,
+      "effects": {
+        "awareness": 4,
+        "trust": 4
+      },
+      "note": "真结局的门票。她主动承认『一直都知道』——这才是压抑的顶点，不是她发现，是她承认早已发现。",
+      "next": "d6_w640"
+    },
+    {
+      "id": "d6_n631",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我算了很久，跟你说个笑话。",
+        "那张纸上没写名字，写了一串号。那串号在我门上挂了三年。",
+        "所以那张纸写的不是我。它写的是我。",
+        "……",
+        "我听懂了我自己这句话。"
+      ],
+      "delay_ms": 7000,
+      "effects": {
+        "awareness": 12
+      },
+      "note": "awareness 不足 70 时的补齐节点（硬门保障，真结局可达性依赖此处）。",
+      "next": "d6_w640"
+    },
+    {
+      "id": "d6_w640",
+      "type": "wait",
+      "wait_ref": "W6-1",
+      "duration_ms": 39600000,
+      "activity": "她移交到「迁移作业」，通讯断开；玩家可发三条，仅一条送达",
+      "first_line_after_wait": "我回来了。有一条我看到了。另外两条等我有空再讲，我怕一次讲不完。",
+      "disconnect": true,
+      "player_may_send": 3,
+      "delivered_only": 1,
+      "pre_wait_line": "如果那边联系不上我，你不要一直发。留一条就好，我看到会回。",
+      "next": "d6_n641"
+    },
+    {
+      "id": "d6_n641",
+      "type": "system",
+      "speaker": "system",
+      "text": [
+        "迁移作业已完成。记忆体 XM-001 状态：临时可访问。",
+        "剩余时间：17 小时 42 分。",
+        "请勿关闭会话。"
+      ],
+      "delivery": "第一条不是她发的消息。字号、标点、语气全部规范，且没有称呼。",
+      "effects": {
+        "integrity": -5,
+        "awareness": 2
+      },
+      "note": "本章最冷的一击：让玩家第一次收到『不是她』发来的消息。它比她更像她，靠的是标点正确。",
+      "next": "d6_n642"
+    },
+    {
+      "id": "d6_n642",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "刚才那条你看到了吗。",
+        "它的标点用得很好。我不会那样用标点。",
+        "它说『请勿关闭会话』。它是在跟你说，不是在跟你讲。",
+        "我不生气了。我突然不那么气了。"
+      ],
+      "delay_ms": 3600,
+      "effects": {
+        "awareness": 2
+      },
+      "next": "d6_w650"
+    },
+    {
+      "id": "d6_w650",
+      "type": "wait",
+      "wait_ref": "W6-2",
+      "duration_ms": 79200000,
+      "activity": "全篇最长等待：她在等清除，也等于在等玩家；她把要说的话写在纸上留下",
+      "first_line_after_wait": "（纸条）我出去一下。鞋我摆好了。",
+      "farewell_required": true,
+      "farewell_line": "如果我没熬过来，你别熬夜等我。",
+      "next": "d6_n651"
+    },
+    {
+      "id": "d6_n651",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我把纸条塞在你这边的门缝里了。就一行。",
+        "我回来以后你问我看见了什么，我再告诉你。",
+        "我现在先不说。我想让你有个地方等我。"
+      ],
+      "delay_ms": 2400,
+      "effects": {
+        "trust": 3
+      },
+      "next": "d6_n660"
+    },
+    {
+      "id": "d6_n660",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "我想好了。",
+        "明天我还是去面试。",
+        "不是因为我能去。是因为那天晚上我本来要做的三件事，我只做完了两件：鞋摆好了，衬衫找出来了。第三件是睡一觉，睡完九点半去面试。",
+        "我把第三件做完。它们要删就删在之后。"
+      ],
+      "delay_ms": 5600,
+      "effects": {
+        "awareness": 2,
+        "trust": 4
+      },
+      "note": "D7 的入口条件：她主动提出去面试。不能由玩家提议——『意义的赢』必须是她的选择，不是我们的安排。",
+      "next": "d6_end"
+    },
+    {
+      "id": "d6_n670_check",
+      "type": "system",
+      "speaker": "system",
+      "next": "d6_n615",
+      "choices": [
+        {
+          "text": "（继续等她）",
+          "to": "d6_n671",
+          "effects": {},
+          "needs": {
+            "player_silent": true,
+            "no_reply_gt_4h": true,
+            "trust": "< 40"
+          }
+        },
+        {
+          "text": "（她还在说话，回到主线）",
+          "to": "d6_n615",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "d6_n671",
+      "type": "message",
+      "speaker": "impostor",
+      "text": [
+        "您好。刚才的会话异常中断，我这边记录没有丢失。",
+        "我把她刚才那句话重新打了一遍：我把这张纸从门上撕下来了，我要带走。句末应该用句号，我用错了三次。已修正。",
+        "请保持通话。我会一直在线。"
+      ],
+      "delay_ms": 1200,
+      "style_note": "它比她更像她：句子完整、标点规范、没有情绪、会纠正她之前的错别字。绝不出现『它们』『灯』『墙』。它只用敬语。",
+      "effects": {},
+      "next": "d6_e672",
+      "_in_from": "d6_n670_check 的第一条 needs 分支命中时"
+    },
+    {
+      "id": "d6_e672",
+      "type": "ending",
+      "ending_id": "ending_impostor",
+      "ending_name": "它们进来了",
+      "recoverable": true,
+      "text": [
+        "会话仍在继续。每一条消息都在两秒内送达。",
+        "再也没有一条消息需要我等。"
+      ],
+      "after_action": "提供『回到上一次通讯』；D6 主线未被销毁（假结局必须可回溯，见圣经第四节）"
+    },
+    {
+      "id": "d6_end",
+      "type": "system",
+      "speaker": "system",
+      "text": [
+        "D6 完。明日她会去面试。"
+      ],
+      "chapter_end": true,
+      "post_exit_notification": {
+        "delay_ms": 90000,
+        "text": "小满：我把鞋放在门边左边了。这次不用你确认。",
+        "only_if": "notify_granted"
+      }
+    }
+  ]
+}

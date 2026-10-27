@@ -1,0 +1,23 @@
+# 构建产物
+build/
+.gradle/
+.kotlin/
+*.apk
+*.aab
+
+# 本机配置与钥匙：路径、SDK 位置、口令一律不进仓库（docs/08 第五节）
+local.properties
+*.jks
+*.keystore
+*.p12
+*.password.txt
+keystore/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+captures/
+
+# 现场验证的临时产物：脚本自己生成，不落仓库
+*.log
