@@ -51,6 +51,8 @@ object UpdateChecker {
         val apkUrl: String,
         val apkSize: Long,
         val notes: String,
+        /** 发布页给的 `sha256:...`（去掉前缀）。空 = 这个 API 版本没给，退化成只比大小 */
+        val apkSha256: String = "",
     ) {
         /** "v1.2.3" -> "1.2.3" */
         val version: String get() = normalizeVersion(tag)
@@ -122,39 +124,44 @@ object UpdateChecker {
         }
     }
 
+    /** 发布页上的一个可下载文件（已经把 JSON 拆成纯数据，好单独测选择规则） */
+    data class Asset(val name: String, val url: String, val size: Long, val sha256: String)
+
     /**
-     * 解析 Release JSON，挑出要下的那个 APK。
+     * 从资产列表里挑要下的那个 APK。
      *
      * **优先 `-release.apk`**：我们的发布页同时挂正式包和开发包（`*-debug.apk`），
      * 照"取第一个 .apk"的写法有 50% 概率给玩家推一个包名带 `.debug` 的开发包——
      * 装了等于把后门面板交到玩家手上，节奏全毁。
+     * 没有 release 命名的包时退回第一个 APK（至少更新链路不断）。
      */
+    fun pickApk(assets: List<Asset>): Asset? {
+        val apks = assets.filter { it.name.lowercase().endsWith(".apk") }
+        return apks.firstOrNull { it.name.lowercase().endsWith("-release.apk") } ?: apks.firstOrNull()
+    }
+
+    /** 解析 Release JSON；挑包的权利在 [pickApk]，这里只做拆解 */
     fun parseLatest(json: String): ReleaseInfo {
         val root = JSONObject(json)
         val tag = root.optString("tag_name", "")
         if (tag.isEmpty()) throw IllegalStateException("Release 数据里没有 tag_name")
-        var releaseUrl = ""
-        var releaseSize = 0L
-        var anyUrl = ""
-        var anySize = 0L
-        root.optJSONArray("assets")?.let { assets ->
-            for (i in 0 until assets.length()) {
-                val a = assets.getJSONObject(i)
-                val name = a.optString("name", "").lowercase()
-                if (!name.endsWith(".apk")) continue
-                if (anyUrl.isEmpty()) {
-                    anyUrl = a.optString("browser_download_url", "")
-                    anySize = a.optLong("size", 0L)
-                }
-                if (name.endsWith("-release.apk") && releaseUrl.isEmpty()) {
-                    releaseUrl = a.optString("browser_download_url", "")
-                    releaseSize = a.optLong("size", 0L)
-                }
+        val assets = mutableListOf<Asset>()
+        root.optJSONArray("assets")?.let { arr ->
+            for (i in 0 until arr.length()) {
+                val a = arr.getJSONObject(i)
+                val name = a.optString("name", "")
+                if (!name.lowercase().endsWith(".apk")) continue
+                assets += Asset(name, a.optString("browser_download_url", ""), a.optLong("size", 0L), digestOf(a))
             }
         }
-        val url = releaseUrl.ifEmpty { anyUrl }
-        if (url.isEmpty()) throw IllegalStateException("最新 Release 里没有 APK 文件")
-        return ReleaseInfo(tag, url, if (releaseUrl.isNotEmpty()) releaseSize else anySize, root.optString("body", ""))
+        val picked = pickApk(assets) ?: throw IllegalStateException("最新 Release 里没有 APK 文件")
+        return ReleaseInfo(tag, picked.url, picked.size, root.optString("body", ""), picked.sha256)
+    }
+
+    /** GitHub 的 asset 带 `digest: "sha256:<hex>"`；老版本或别的托管方可能没有 */
+    private fun digestOf(asset: JSONObject): String {
+        val raw = asset.optString("digest", "")
+        return if (raw.startsWith("sha256:")) raw.removePrefix("sha256:") else ""
     }
 
     // ── 下载（系统 DownloadManager）────────────────────────────────────────────
@@ -175,11 +182,69 @@ object UpdateChecker {
 
     fun downloadedFile(ctx: Context, fileName: String): File = File(updateDir(ctx), fileName)
 
+    /**
+     * 更新目录里是不是已经有一个"就是这一版、而且没坏"的包。有就别再花玩家一次流量。
+     *
+     * 先比大小（免费），再比发布页给的 sha256。只比大小不够——同名同尺寸的资产
+     * 可以是另一个构建（v0.1.1 我们就重打过一次包），那时装完玩家会以为更新没用。
+     */
+    fun cachedArchiveReady(ctx: Context, info: ReleaseInfo): Boolean {
+        if (info.apkSize <= 0L) return false
+        val f = downloadedFile(ctx, archiveName(info))
+        if (!f.isFile || f.length() != info.apkSize) return false
+        return info.apkSha256.isEmpty() || sha256(f) == info.apkSha256
+    }
+
+    /** 用发布页给的资产名落盘：`beifen-zhong-<版本>-release.apk` */
+    fun archiveName(info: ReleaseInfo): String {
+        val fromUrl = info.apkUrl.substringAfterLast('/').substringBefore('?')
+        return fromUrl.ifEmpty { "beifen-zhong-${info.version}-release.apk" }
+    }
+
+    /**
+     * 下载完成后校验文件；不匹配就删掉它——留着一个坏包只会骗到下一次点击。
+     * 返回 false 时不要弹「安装」。
+     */
+    fun verifyArchive(ctx: Context, info: ReleaseInfo): Boolean {
+        val f = downloadedFile(ctx, archiveName(info))
+        val ok = f.isFile && f.length() == info.apkSize &&
+                (info.apkSha256.isEmpty() || sha256(f) == info.apkSha256)
+        if (!ok) f.delete()
+        return ok
+    }
+
+    /** 11 MB 读完约几十毫秒；调用方请在 IO 线程上用它 */
+    private fun sha256(file: File): String = try {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buf = ByteArray(1 shl 16)
+            while (true) {
+                val n = input.read(buf)
+                if (n <= 0) break
+                md.update(buf, 0, n)
+            }
+        }
+        md.digest().joinToString("") { "%02x".format(it) }
+    } catch (_: Exception) {
+        ""
+    }
+
     data class DownloadProgress(val status: Int, val downloaded: Long, val total: Long) {
         val percent: Int get() = if (total > 0) (downloaded * 100 / total).toInt() else 0
 
         val isSuccessful get() = status == DownloadManager.STATUS_SUCCESSFUL
         val isFailed get() = status == DownloadManager.STATUS_FAILED
+
+        /**
+         * 系统还没在传字节：任务被挂起（网络没通过系统校验、离线、排队等 Wi‑Fi），
+         * 或者它连总大小都还没拿到。
+         *
+         * 这不是失败，也不该显示成一个卡死的百分比。模拟器上真遇到过：
+         * 移动网络带 PARTIAL_CONNECTIVITY，任务挂了 7 分钟停在 0%——
+         * 玩家的手机连的是没过校验的门户网络时会是同样的观感。
+         */
+        val isWaiting get() = !isSuccessful && !isFailed &&
+                (status != DownloadManager.STATUS_RUNNING || total <= 0L)
     }
 
     /** 查下载状态与进度；null = 任务查不到（系统重启、被清理） */

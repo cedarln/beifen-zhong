@@ -1,5 +1,6 @@
 package cn.linan.backingup
 
+import android.app.DownloadManager
 import cn.linan.backingup.update.UpdateChecker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -106,5 +107,66 @@ class NetworkBoundaryTest {
         // 读不到当前版本时不弹更新——宁可不动，也不要在玩家身上试错
         assertTrue(!UpdateChecker.hasNewer("v0.1.1", ""))
         assertTrue(!UpdateChecker.hasNewer("v0.1.1", null))
+    }
+
+    @Test
+    fun `系统挂起下载时不许伪装成在下载`() {
+        // 模拟器实测：移动网络带 PARTIAL_CONNECTIVITY 时任务挂在"还没开始"，
+        // 界面停在一个不动的 0% 达七分钟。那种表现只能被叫做坏了。
+        val total = 11_966_395L
+        assertTrue(
+            UpdateChecker.DownloadProgress(DownloadManager.STATUS_PAUSED, 0L, total).isWaiting,
+        )
+        // 连总大小都没拿到 = 还没开始传，百分比没有意义
+        assertTrue(
+            UpdateChecker.DownloadProgress(DownloadManager.STATUS_RUNNING, 0L, -1L).isWaiting,
+        )
+        val running =
+            UpdateChecker.DownloadProgress(DownloadManager.STATUS_RUNNING, 5_000_000L, total)
+        assertTrue(!running.isWaiting)
+        assertEquals(41, running.percent)
+        val done =
+            UpdateChecker.DownloadProgress(DownloadManager.STATUS_SUCCESSFUL, total, total)
+        assertTrue(done.isSuccessful)
+        assertTrue(!done.isWaiting)
+    }
+
+    @Test
+    fun `更新只装 release 那个包，不装 debug`() {
+        // 照"取第一个 .apk"的写法，我们的发布页有 50% 概率把带后门面板的开发包推给玩家
+        val assets = listOf(
+            UpdateChecker.Asset(
+                "beifen-zhong-v0.2.0-debug.apk",
+                "https://github.com/cedarln/beifen-zhong/releases/download/v0.2.0/beifen-zhong-v0.2.0-debug.apk",
+                15_000_000L,
+                "aa",
+            ),
+            UpdateChecker.Asset(
+                "beifen-zhong-v0.2.0-release.apk",
+                "https://github.com/cedarln/beifen-zhong/releases/download/v0.2.0/beifen-zhong-v0.2.0-release.apk",
+                11_000_000L,
+                "bb",
+            ),
+            UpdateChecker.Asset("changelog.txt", "https://x/changelog.txt", 10L, ""),
+        )
+        val picked = UpdateChecker.pickApk(assets)
+        assertEquals("beifen-zhong-v0.2.0-release.apk", picked?.name)
+        assertEquals("bb", picked?.sha256)
+        // 没有 release 命名的包时链路不断，至少退回第一个 APK
+        assertEquals("beifen-zhong-v0.2.0-debug.apk", UpdateChecker.pickApk(assets.take(1))?.name)
+        assertTrue(UpdateChecker.pickApk(emptyList()) == null)
+    }
+
+    @Test
+    fun `落盘名字跟着发布页的资产名走`() {
+        val info = UpdateChecker.ReleaseInfo(
+            "v0.2.0",
+            "https://github.com/cedarln/beifen-zhong/releases/download/v0.2.0/beifen-zhong-v0.2.0-release.apk",
+            11_000_000L,
+            "",
+            "bb",
+        )
+        assertEquals("beifen-zhong-v0.2.0-release.apk", UpdateChecker.archiveName(info))
+        assertTrue(UpdateChecker.archiveName(info).endsWith("-release.apk"))
     }
 }

@@ -33,9 +33,12 @@ import androidx.compose.ui.unit.dp
 import cn.linan.backingup.BuildConfig
 import cn.linan.backingup.audio.AmbienceDirector
 import cn.linan.backingup.update.UpdateChecker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * 设置页——只有四块，且第一块默认是关的。
@@ -192,14 +195,15 @@ private fun UpdateSection() {
     var ui by remember { mutableStateOf<UpdateUi>(UpdateUi.Idle) }
     var note by remember { mutableStateOf<String?>(null) }
     var downloadId by remember { mutableStateOf(-1L) }
-    var apkName by remember { mutableStateOf("") }
+    var expected by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }
 
     // 下载进度 500ms 一轮。离开这页时协程取消，但任务在系统 DownloadManager 里，
     // 回来按同一个 id 还能查到——所以进度条不必假装是应用自己在下载。
     LaunchedEffect(downloadId) {
         if (downloadId <= 0L) return@LaunchedEffect
         while (isActive) {
-            val p = UpdateChecker.queryDownload(context, downloadId)
+            val p = withContext(Dispatchers.IO) { UpdateChecker.queryDownload(context, downloadId) }
+            val info = expected
             if (p == null) {
                 ui = UpdateUi.Failed("下载任务不在了，重新检查一次")
                 downloadId = -1L
@@ -207,7 +211,12 @@ private fun UpdateSection() {
             }
             when {
                 p.isSuccessful -> {
-                    ui = UpdateUi.Ready
+                    // 下完不等于能装：大小和 sha256 都对得上才说"已就绪"
+                    ui = if (info != null && withContext(Dispatchers.IO) {
+                            UpdateChecker.verifyArchive(context, info)
+                        }
+                    ) UpdateUi.Ready(fromDisk = false)
+                    else UpdateUi.Failed("下载的文件校验不过，已删掉。重新按一次「检查更新」再下")
                     downloadId = -1L
                     break
                 }
@@ -217,7 +226,7 @@ private fun UpdateSection() {
                     break
                 }
                 else -> {
-                    ui = UpdateUi.Downloading(p.percent)
+                    ui = UpdateUi.Downloading(p.percent, p.isWaiting)
                     delay(500)
                 }
             }
@@ -230,14 +239,34 @@ private fun UpdateSection() {
             val s = ui
             when {
                 s is UpdateUi.Available -> {
-                    apkName = "beifen-zhong-${s.info.version}-release.apk"
-                    downloadId = UpdateChecker.download(context, s.info.apkUrl, apkName)
-                    ui = if (downloadId <= 0L) UpdateUi.Failed("这台设备上没有可用的下载服务")
-                    else UpdateUi.Downloading(0)
+                    expected = s.info
+                    ui = UpdateUi.Preparing
+                    scope.launch {
+                        // 校验一个 11 MB 的文件要几十到两百毫秒，别把它放在主线程上
+                        val cached = withContext(Dispatchers.IO) {
+                            UpdateChecker.cachedArchiveReady(context, s.info)
+                        }
+                        if (cached) {
+                            ui = UpdateUi.Ready(fromDisk = true)
+                        } else {
+                            val id = UpdateChecker.download(
+                                context,
+                                s.info.apkUrl,
+                                UpdateChecker.archiveName(s.info),
+                            )
+                            downloadId = id
+                            ui = if (id <= 0L) UpdateUi.Failed("这台设备上没有可用的下载服务")
+                            else UpdateUi.Downloading(0, waiting = true)
+                        }
+                    }
                 }
                 s is UpdateUi.Ready -> {
                     val activity = context as? Activity
-                    val apk = UpdateChecker.downloadedFile(context, apkName)
+                    val info = expected
+                    val apk = if (info == null) File("") else UpdateChecker.downloadedFile(
+                        context,
+                        UpdateChecker.archiveName(info),
+                    )
                     when {
                         activity == null -> note = "拿不到当前窗口，装不了"
                         !apk.isFile -> ui = UpdateUi.Failed("更新包不在了，重新检查一次")
@@ -261,14 +290,16 @@ private fun UpdateSection() {
                 }
             }
         },
-        enabled = ui !is UpdateUi.Checking && ui !is UpdateUi.Downloading,
+        enabled = ui !is UpdateUi.Checking && ui !is UpdateUi.Preparing && ui !is UpdateUi.Downloading,
     ) {
         Text(
             when (val s = ui) {
                 is UpdateUi.Checking -> "检查中…"
+                is UpdateUi.Preparing -> "核对更新包…"
                 is UpdateUi.Available ->
                     "下载 v${s.info.version}（${"%.1f".format(s.info.apkSize / 1048576.0)} MB）"
-                is UpdateUi.Downloading -> "下载中 ${s.percent}%"
+                is UpdateUi.Downloading ->
+                    if (s.waiting) "等待网络" else "下载中 ${s.percent}%"
                 is UpdateUi.Ready -> "安装"
                 else -> "检查更新"
             },
@@ -282,10 +313,23 @@ private fun UpdateSection() {
             is UpdateUi.Available ->
                 "发现新版 v${s.info.version}（当前 v${s.current}）。下载走系统下载器，进度在通知栏；" +
                         "装完是覆盖安装，进度不会丢（卸载才会）。"
-            is UpdateUi.Downloading -> "下载中 ${s.percent}%，可以先退出这一页。"
-            is UpdateUi.Ready -> "更新包已就绪。安装器会问你一次「安装未知应用」，只问这一次。"
+            is UpdateUi.Downloading ->
+                if (s.waiting) {
+                    "下载还没开始传：系统在等一个可用网络（离线、连的网没过系统校验、或在排队等 Wi‑Fi 都会这样）。" +
+                            "任务没丢，可以先退出这一页，网通了它自己继续。"
+                } else {
+                    "下载中 ${s.percent}%，可以先退出这一页。"
+                }
+            is UpdateUi.Ready ->
+                if (s.fromDisk) {
+                    "更新包已经在手机上（上次下过没装），这次没有再走网络。" +
+                            "安装器会问你一次「安装未知应用」，只问这一次。"
+                } else {
+                    "更新包已就绪。安装器会问你一次「安装未知应用」，只问这一次。"
+                }
             is UpdateUi.Failed -> s.why
             is UpdateUi.Checking -> "正在查发布页…"
+            is UpdateUi.Preparing -> "先看一眼手机上有没有已经下好的这一版；没有才走网络。"
             else -> "本包唯一的网络调用就是这一颗按钮：不自动检查、不后台轮询，" +
                     "她的台词一个字都不从网络来。出处 $RELEASES_HINT"
         },
@@ -301,10 +345,15 @@ private fun UpdateSection() {
 private sealed interface UpdateUi {
     data object Idle : UpdateUi
     data object Checking : UpdateUi
-    data object Ready : UpdateUi
+
+    /** 按了「下载」之后先核一遍本地有没有现成的包，这一步不走网络 */
+    data object Preparing : UpdateUi
+
+    /** fromDisk = 这个包本来就在更新目录里（上次下过没装），没有再走一次网络 */
+    data class Ready(val fromDisk: Boolean) : UpdateUi
     data class Latest(val version: String) : UpdateUi
     data class Available(val info: UpdateChecker.ReleaseInfo, val current: String) : UpdateUi
-    data class Downloading(val percent: Int) : UpdateUi
+    data class Downloading(val percent: Int, val waiting: Boolean) : UpdateUi
     data class Failed(val why: String) : UpdateUi
 }
 
