@@ -37,8 +37,8 @@ android {
         applicationId = "cn.linan.backingup"
         minSdk = 26           // 通知渠道是硬依赖；再往下掉就要自己封一层，不值
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.1.2"
         // 后门面板要读 BuildConfig.DEBUG，AGP 8 默认不生成
         buildConfigField("boolean", "DEV_PANEL_DEFAULT", "false")
     }
