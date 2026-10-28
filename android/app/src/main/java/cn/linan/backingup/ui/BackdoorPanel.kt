@@ -181,9 +181,10 @@ fun BackdoorPanel(vm: GameViewModel, onDismiss: () -> Unit) {
         // ── ④ 度量实时读写 ────────────────────────────────────────────────────
         Section("④ 度量（可达性检查靠这个做，不靠读代码推）") {
             val m = data.metrics
-            MetricSlider("trust", m.first) { vm.setMetric("trust", it) }
-            MetricSlider("awareness", m.second) { vm.setMetric("awareness", it) }
-            MetricSlider("integrity", m.third) { vm.setMetric("integrity", it) }
+            MetricSlider("trust", m.first, data.metricRange) { vm.setMetric("trust", it) }
+            MetricSlider("awareness", m.second, data.metricRange) { vm.setMetric("awareness", it) }
+            MetricSlider("integrity", m.third, data.metricRange) { vm.setMetric("integrity", it) }
+            SmallButton("回到本章起点（D${state.chapter} 声明的那组值）") { vm.resetMetricsToChapterStart() }
             Text(
                 "隐藏结局《紧急联系人》要 awareness ∈ [70,76] 且 integrity ≥ 38 且 quick_mode=false；" +
                         "三封灭屏信完整阅读那条是写给作者的中文注记，引擎不猜。",
@@ -303,16 +304,39 @@ private fun SmallButton(label: String, selected: Boolean = false, onClick: () ->
     ) { Text(label, style = MaterialTheme.typography.labelSmall) }
 }
 
+/**
+ * 度量滑块。
+ *
+ * **`valueRange` 必须显式给。** Material3 的 `Slider` 默认量程是 `0f..1f`，
+ * 上一版这里只写了 `value = value.coerceIn(0f, 100f)` 却没给 range，于是两条一起坏：
+ * 界面上任何 ≥1 的度量都等于"拖到头"（三条全钉在最右端，看着像 100），
+ * 而 `onValueChange` 只能回调出 0.0~1.0——玩家拖一下，trust 从 62 直接变成 0 或 1，
+ * **而且再也拖不回去**。真机玩家报的"设置里面的度量调整不回来了"就是这一条。
+ *
+ * range 从 [BackdoorData.metricRange] 传进来：那个字段本来就是为这件事声明的，
+ * 之前它被写在数据类里一次都没被用过——这就是为什么单看面板代码"逻辑没错"却整个是坏的。
+ */
 @Composable
-private fun MetricSlider(name: String, value: Double, onChange: (Double) -> Unit) {
+private fun MetricSlider(
+    name: String,
+    value: Double,
+    range: ClosedRange<Double>,
+    onChange: (Double) -> Unit,
+) {
+    val from = range.start.toFloat()
+    val to = range.endInclusive.toFloat()
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(name, style = MaterialTheme.typography.labelSmall, color = InkColors.text, modifier = Modifier.weight(1f))
             Text("%.0f".format(value), style = MaterialTheme.typography.labelSmall, color = InkColors.dim)
         }
         Slider(
-            value = value.toFloat().coerceIn(0f, 100f),
+            value = value.toFloat().coerceIn(from, to),
             onValueChange = { onChange(it.toDouble()) },
+            valueRange = from..to,
+            // 剧本里的 needs 全按整数写（70、38 这种）。不给整步就会拖出 61.7：
+            // 界面显示 62、闸门按 61 判，是个查不出来的假朋友
+            steps = (to - from).toInt() - 1,
             colors = SliderDefaults.colors(thumbColor = InkColors.pipe, activeTrackColor = InkColors.pipe),
         )
     }

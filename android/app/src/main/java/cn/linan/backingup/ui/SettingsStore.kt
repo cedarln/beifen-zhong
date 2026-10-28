@@ -49,6 +49,19 @@ class SettingsStore(private val context: Context) {
         context.settingsDataStore.edit { it[AmbienceInvited] = true }
     }
 
+    /**
+     * 恢复默认：把上面三条一起清掉，回到"刚装好"的样子。
+     *
+     * 只清设置，**不碰存档**。存档里装的是"她那边发生过什么"，设置里装的是"这台设备
+     * 怎么放声音、什么时候可以吵你"——把一颗『恢复默认』顺手做成清档是最危险的误设计；
+     * 真要重来一次是后门面板里『清空重开』那一颗（玩家侧看不到它，见 docs/04）。
+     * 系统权限（通知、精确唤醒）也不在这里：那是玩家在系统里给的，我们撤不掉，
+     * 也不该假装撤得掉——设置页那两行状态照旧显示真实值。
+     */
+    suspend fun resetAll() {
+        context.settingsDataStore.edit { it.clear() }
+    }
+
     val ambienceFlow: Flow<Boolean> = context.settingsDataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { it[AmbienceEnabled] ?: false }

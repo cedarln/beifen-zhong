@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -41,15 +42,20 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * 设置页——只有四块，且第一块默认是关的。
+ * 设置页——五块，且第一块默认是关的。
  *
  * 「楼里的声音」这条开关是 docs/06 红线 3 的 UI 落点：恐怖游戏不许偷偷放声音。
  * 打开之后现场显示四条声床的实时增益，一是给我们自己排查用（验收 4 要实测 d7_n711 全 0），
  * 二是让玩家看得见"它在响什么"——一个不肯说自己在放什么声音的氛围层不该上线。
+ *
+ * 最后那块「恢复默认」是玩家要的。它只回滚设置，不回滚进度，而且这句话写在按钮旁边、
+ * 也写在确认框里：**一颗叫"重置"的按钮如果说不清自己会不会毁掉七天的存档，就不该存在**。
+ * 真要重来一次是开发面板里的『清空重开』，玩家侧看不到那颗。
  */
 @Composable
 fun SettingsSheet(vm: GameViewModel, onDismiss: () -> Unit) {
     val state by vm.state.collectAsState()
+    var askReset by remember { mutableStateOf(false) }
     Column(
         Modifier
             .fillMaxSize()
@@ -161,6 +167,52 @@ fun SettingsSheet(vm: GameViewModel, onDismiss: () -> Unit) {
                 )
             }
         }
+
+        Block("恢复默认") {
+            Text(
+                "把「楼里的声音」和「夜里也让她说」关回默认（两个都是关），" +
+                        "那行邀请提示会在下次进章节时重新出现一次。",
+                style = MaterialTheme.typography.bodySmall,
+                color = InkColors.dim,
+            )
+            // 这一行是这颗按钮最重要的一部分：玩家点「重置」时最怕的是"我会不会白玩了"。
+            // 答不清楚就不要做这颗按钮。
+            Text(
+                "它不删存档、不把你退回第一天、不改三度量，也不撤你在系统里给过的通知权限" +
+                        "（那两样我们撤不掉）——那些不是设置，是她那边已经发生过的事。",
+                style = MaterialTheme.typography.labelSmall,
+                color = InkColors.dim,
+            )
+            TextButton(onClick = { askReset = true }) {
+                Text("恢复默认设置", color = InkColors.emergency, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+
+    if (askReset) {
+        AlertDialog(
+            onDismissRequest = { askReset = false },
+            title = { Text("恢复默认设置", color = InkColors.text) },
+            text = {
+                Column {
+                    Text("只动这两个开关：声音关、夜里也让她说关。", style = MaterialTheme.typography.bodyMedium, color = InkColors.text)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "存档、进度、度量、已经排好的等待都不动。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = InkColors.dim,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { askReset = false; vm.resetSettings() }) {
+                    Text("恢复", color = InkColors.text)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { askReset = false }) { Text("算了", color = InkColors.dim) }
+            },
+        )
     }
 }
 

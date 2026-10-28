@@ -233,6 +233,28 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = _state.value.copy(showAmbienceInvite = false)
     }
 
+    /**
+     * 设置页的「恢复默认」。清的是设置：声床开关、夜间授权、那行邀请的一次性标记。
+     *
+     * 三件它**不做**的事都写在设置页那几行小字里，因为一颗会顺手毁掉七天进度的按钮
+     * 不该只靠"用户以为它不会"来兜底：不删存档（那是『清空重开』的活，在开发面板里）、
+     * 不撤系统权限（我们撤不掉，也不该假装撤得掉）、不关在途的等待闹钟（她该几点来还几点来）。
+     */
+    fun resetSettings() {
+        ambienceOn = false
+        nightDeliveryOn = false
+        // 邀请那行下次进章节时才会重新出现（init 里那三个条件），这一屏不当场弹回去打扰
+        showInvite = false
+        player.release()
+        viewModelScope.launch { settings.resetAll() }
+        _state.value = _state.value.copy(
+            ambienceOn = false,
+            nightDeliveryOn = false,
+            ambience = emptyMap(),
+            showAmbienceInvite = false,
+        )
+    }
+
     fun onScreenOff(off: Boolean) {
         signals.screenOff = off
         if (ambienceOn) stepAmbience()
@@ -269,18 +291,35 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** ④ 度量实时读写：可达性检查靠它，不靠读代码推 */
+    /**
+     * ④ 度量读写。
+     *
+     * `reEmitEntry = false` 是必须的：这里只是"把这一个数改掉然后重判闸门"，
+     * 不是"再走一遍这个节点"。带着 emit 走一遍的代价是真撞到的——拖一下滑块，
+     * 她当前那段话就又被贴进转写一遍、那一笔信任又加一次（和 `recheck()` 修过的是同一类坑，
+     * 见 PlaythroughTest 里"原地重判不许有副作用"那条）。
+     */
     fun setMetric(name: String, value: Double) {
         mutate { s, eng ->
             s.metrics.set(name, value)
             s.debugUsed = true
-            eng.advance(s, clock, s.nodeId)
+            eng.advance(s, clock, s.nodeId, reEmitEntry = false)
+        }
+    }
+
+    /** ④ 的复位：把三度量拉回**本章起点**声明的那组值，不动节点、不动转写 */
+    fun resetMetricsToChapterStart() {
+        mutate { s, eng ->
+            s.debugUsed = true
+            eng.applyChapterStartState(s)
+            eng.advance(s, clock, s.nodeId, reEmitEntry = false)
         }
     }
 
     /** ⑤ 伪造 signal：null 表示取消伪造 */
     fun overrideSignal(name: String, value: Boolean?) {
         signals.override(name, value)
-        mutate { s, eng -> eng.advance(s, clock, s.nodeId) }
+        mutate { s, eng -> eng.advance(s, clock, s.nodeId, reEmitEntry = false) }
     }
 
     /** 跳等待：把时钟推到 due 之后。等待照常结算，只是"她被压缩了"——记进 skippedMs */
