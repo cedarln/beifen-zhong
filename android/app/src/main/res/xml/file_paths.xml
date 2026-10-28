@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider 的可见范围。这里只开一条：应用专属外部存储根（更新包在它的 update/ 子目录里）。
+  存档所在的 filesDir / SharedPreferences 一律不在名单上——
+  安装器只需要那一个 APK，不需要看见她。
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-files-path name="update_apk" path="." />
+</paths>

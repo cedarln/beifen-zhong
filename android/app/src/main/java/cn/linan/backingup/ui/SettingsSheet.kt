@@ -1,7 +1,6 @@
 package cn.linan.backingup.ui
 
-import android.content.Intent
-import android.net.Uri
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,16 +20,22 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import cn.linan.backingup.BuildConfig
 import cn.linan.backingup.audio.AmbienceDirector
+import cn.linan.backingup.update.UpdateChecker
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * 设置页——只有四块，且第一块默认是关的。
@@ -118,7 +123,7 @@ fun SettingsSheet(vm: GameViewModel, onDismiss: () -> Unit) {
                 )
             }
             Text(
-                "通知只用于「到她该说话的时候」：不响铃、不震动、不亮屏，没有推送服务，本包没有网络权限。" +
+                "通知只用于「到她该说话的时候」：不响铃、不震动、不亮屏，没有推送服务。" +
                         "她不是系统闹钟，也不进时钟 App。",
                 style = MaterialTheme.typography.labelSmall,
                 color = InkColors.dim,
@@ -143,31 +148,7 @@ fun SettingsSheet(vm: GameViewModel, onDismiss: () -> Unit) {
                 style = MaterialTheme.typography.labelSmall,
                 color = InkColors.dim,
             )
-            // 更新入口。她上不了网——本包没有 INTERNET 权限，所以"自动检查更新"这件事做不了，
-            // 也不该做：一个声称只活在这台手机缓存里的角色，不该在背后悄悄联网问服务器"有新版吗"。
-            // 能做的只有把出处交给你：点下去走的是**系统浏览器**，网络是你的手机在走，不是她。
-            var updateNote by remember { mutableStateOf<String?>(null) }
-            val context = LocalContext.current
-            TextButton(
-                onClick = {
-                    val sent = runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(RELEASES_URL))
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
-                    }.isSuccess
-                    updateNote = if (sent) null
-                        else "这台机器上没有能打开网页的应用。出处是 $RELEASES_URL"
-                },
-            ) { Text("看有没有新版", color = InkColors.pipe) }
-            Text(
-                "覆盖安装即可，进度不会丢（卸载才会）。",
-                style = MaterialTheme.typography.labelSmall,
-                color = InkColors.dim,
-            )
-            updateNote?.let {
-                Text(it, style = MaterialTheme.typography.labelSmall, color = InkColors.emergency)
-            }
+            UpdateSection()
             if (state.ambienceOn) {
                 Text(
                     "声床节拍 ${"%.1f".format(AmbienceDirector.TICK_MS / 1000.0)}s 一次，斜坡最多 " +
@@ -190,8 +171,145 @@ private fun Block(title: String, content: @Composable () -> Unit) {
 }
 
 /**
- * 发布页。本包没有 INTERNET 权限，这个链接只是交给**系统浏览器**去打开——
- * 走网络的是你的手机，不是她。这也是"更新入口"能做到的全部：
- * 没有联网检查，只有把出处放在你找得到的地方。
+ * 更新入口。
+ *
+ * v0.1.0 的立场是"本包没有网络权限，所以只能把发布页链接交给你"。
+ * 玩家的要求把它推回来了：**在应用里检查、在应用里下、在应用里装，不要跳浏览器**——
+ * 跳出去一次，回来就要重新找包、重新装、还可能被系统提示劝退。这条要求是对的。
+ *
+ * 于是 `INTERNET` 进来了，代价是"整包不申请网络权限"这句话不能再说了。
+ * 剩下能说的是边界，而且它写在代码里、由 `NetworkBoundaryTest` 判失败，不靠自觉：
+ *   1. 全工程只有 [UpdateChecker] 可以碰网络 API；
+ *   2. 只有玩家按下这一颗按钮才动一次——没有启动时自动检查、没有后台轮询，
+ *      引擎、唤醒链路、`WakeReceiver` 都不引用它；
+ *   3. 查的是我们自己的发布页，小满的话仍然一个字都不从网络回来。
  */
-private const val RELEASES_URL = "https://github.com/cedarln/beifen-zhong/releases"
+@Composable
+private fun UpdateSection() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val current = remember { UpdateChecker.currentVersion(context) }
+    var ui by remember { mutableStateOf<UpdateUi>(UpdateUi.Idle) }
+    var note by remember { mutableStateOf<String?>(null) }
+    var downloadId by remember { mutableStateOf(-1L) }
+    var apkName by remember { mutableStateOf("") }
+
+    // 下载进度 500ms 一轮。离开这页时协程取消，但任务在系统 DownloadManager 里，
+    // 回来按同一个 id 还能查到——所以进度条不必假装是应用自己在下载。
+    LaunchedEffect(downloadId) {
+        if (downloadId <= 0L) return@LaunchedEffect
+        while (isActive) {
+            val p = UpdateChecker.queryDownload(context, downloadId)
+            if (p == null) {
+                ui = UpdateUi.Failed("下载任务不在了，重新检查一次")
+                downloadId = -1L
+                break
+            }
+            when {
+                p.isSuccessful -> {
+                    ui = UpdateUi.Ready
+                    downloadId = -1L
+                    break
+                }
+                p.isFailed -> {
+                    ui = UpdateUi.Failed("下载失败：网络不通，或发布页不可达")
+                    downloadId = -1L
+                    break
+                }
+                else -> {
+                    ui = UpdateUi.Downloading(p.percent)
+                    delay(500)
+                }
+            }
+        }
+    }
+
+    TextButton(
+        onClick = {
+            note = null
+            val s = ui
+            when {
+                s is UpdateUi.Available -> {
+                    apkName = "beifen-zhong-${s.info.version}-release.apk"
+                    downloadId = UpdateChecker.download(context, s.info.apkUrl, apkName)
+                    ui = if (downloadId <= 0L) UpdateUi.Failed("这台设备上没有可用的下载服务")
+                    else UpdateUi.Downloading(0)
+                }
+                s is UpdateUi.Ready -> {
+                    val activity = context as? Activity
+                    val apk = UpdateChecker.downloadedFile(context, apkName)
+                    when {
+                        activity == null -> note = "拿不到当前窗口，装不了"
+                        !apk.isFile -> ui = UpdateUi.Failed("更新包不在了，重新检查一次")
+                        // false = 系统不让装，已经把玩家送到设置页；回来再按一次就行
+                        !UpdateChecker.promptInstall(activity, apk) ->
+                            note = "已跳到系统设置：允许「安装未知应用」之后，回来再按一次『安装』"
+                    }
+                }
+                else -> {
+                    ui = UpdateUi.Checking
+                    scope.launch {
+                        ui = runCatching { UpdateChecker.fetchLatest() }.fold(
+                            onSuccess = { info ->
+                                if (UpdateChecker.hasNewer(info.tag, current))
+                                    UpdateUi.Available(info, current)
+                                else UpdateUi.Latest(current)
+                            },
+                            onFailure = { UpdateUi.Failed("查不到新版：${it.message ?: "网络不通"}") },
+                        )
+                    }
+                }
+            }
+        },
+        enabled = ui !is UpdateUi.Checking && ui !is UpdateUi.Downloading,
+    ) {
+        Text(
+            when (val s = ui) {
+                is UpdateUi.Checking -> "检查中…"
+                is UpdateUi.Available ->
+                    "下载 v${s.info.version}（${"%.1f".format(s.info.apkSize / 1048576.0)} MB）"
+                is UpdateUi.Downloading -> "下载中 ${s.percent}%"
+                is UpdateUi.Ready -> "安装"
+                else -> "检查更新"
+            },
+            color = InkColors.pipe,
+        )
+    }
+
+    Text(
+        when (val s = ui) {
+            is UpdateUi.Latest -> "已经是最新版 v${s.version}。"
+            is UpdateUi.Available ->
+                "发现新版 v${s.info.version}（当前 v${s.current}）。下载走系统下载器，进度在通知栏；" +
+                        "装完是覆盖安装，进度不会丢（卸载才会）。"
+            is UpdateUi.Downloading -> "下载中 ${s.percent}%，可以先退出这一页。"
+            is UpdateUi.Ready -> "更新包已就绪。安装器会问你一次「安装未知应用」，只问这一次。"
+            is UpdateUi.Failed -> s.why
+            is UpdateUi.Checking -> "正在查发布页…"
+            else -> "本包唯一的网络调用就是这一颗按钮：不自动检查、不后台轮询，" +
+                    "她的台词一个字都不从网络来。出处 $RELEASES_HINT"
+        },
+        style = MaterialTheme.typography.labelSmall,
+        color = if (ui is UpdateUi.Failed) InkColors.emergency else InkColors.dim,
+    )
+    note?.let {
+        Text(it, style = MaterialTheme.typography.labelSmall, color = InkColors.emergency)
+    }
+}
+
+/** 更新入口的状态机。注意没有 "AutoCheck" 这一项：它只能由玩家按出来。 */
+private sealed interface UpdateUi {
+    data object Idle : UpdateUi
+    data object Checking : UpdateUi
+    data object Ready : UpdateUi
+    data class Latest(val version: String) : UpdateUi
+    data class Available(val info: UpdateChecker.ReleaseInfo, val current: String) : UpdateUi
+    data class Downloading(val percent: Int) : UpdateUi
+    data class Failed(val why: String) : UpdateUi
+}
+
+/**
+ * 发布页。检查更新走的是 API，这里只是给玩家留一个能自己核对出处的地方——
+ * 点设置页那颗按钮不需要它。
+ */
+private const val RELEASES_HINT = "github.com/cedarln/beifen-zhong"

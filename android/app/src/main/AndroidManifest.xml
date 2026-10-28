@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  权限清单即隐私宣言：这里没有 INTERNET。
-  《正在备份》的设定是"她只存在于这台手机的本地缓存里"，
-  所以整包不申请网络权限——不是忘了加，是不能加。
+  权限清单即隐私宣言。
+  《正在备份》的设定是"她只存在于这台手机的本地缓存里"，所以 v0.1.0 整包不申请网络权限。
+  v0.1.1 起玩家要求"应用内下载并更新，不要跳浏览器"，于是 `INTERNET` 进来了——
+  这是**唯一一个**例外，而且它的边界是代码级守着的，不是写在注释里自我表扬：
+    · 全工程只有 `update/UpdateChecker.kt` 允许出现网络 API，
+      越界由 `NetworkBoundaryTest` 直接判失败（它扫源码，不靠人记得）；
+    · 它只在玩家按下设置页「检查更新」那一刻动一次：没有启动时自动检查、没有后台轮询、
+      不进 GameViewModel、不进引擎、不在 WakeReceiver / CatchUpWorker 的任何一条路径上；
+    · 它查的是我们自己的发布页。小满说的话、她知道的东西，一个字都不从网络回来——
+      剧本仍然只来自 `script/*.json`（`StoryEngine` 第一条铁律）。
+  一句话：上网的是"你下楼取东西"这件事，不是她。
   也不申请 READ_NOTIFICATIONS / 无障碍 / 通讯录：小满能感知的一切
   都来自 docs/01 感知映射表里那些合法设备信号（前台、灭屏、省电、电量、日期）。
 
@@ -12,7 +20,7 @@
   是 androidx.core 给"运行期注册的接收器"自动加的**自定义签名级**权限，只发给这个包自己，
   不给外部 App 任何能力。ACCESS_NETWORK_STATE 只是"能不能读到网络连接状态"，
   它不给任何出网能力；我们的代码从未查询它，WorkManager 也没给我们的任务加网络约束。
-  想删干净得验证补投链路，v0.1.0 不动它，先把话说在这儿。
+  想删干净得验证补投链路，v0.1.1 不动它，先把话说在这儿。
   （反过来，原来这里还写着 VIBRATE——代码里一次都没调用过震动，而界面承诺"不响铃、不震动"，
   所以删了：一条用不上的权限不是"以防万一"，是对那句承诺的伪造。）
 -->
@@ -33,6 +41,11 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- 重启后 catchUp()：逾期不补投 = 玩家以为游戏坏了 -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- 应用内更新：只给 update/UpdateChecker.kt 用（NetworkBoundaryTest 守这条边界）。
+         剧情层、引擎、唤醒链路一律不许引用网络——见文件顶部那三条。 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 更新包下完之后拉起系统安装器。侧载分发的必然代价，商店包不该带这条。 -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:allowBackup="false"
@@ -42,6 +55,19 @@
         android:supportsRtl="false"
         android:theme="@style/Theme.BackingUp"
         tools:targetApi="34">
+
+        <!-- 应用内更新：DownloadManager 把更新包下到 getExternalFilesDir/update/，
+             经这里授权给系统安装器。exported=false + grantUriPermissions=true：
+             安装器只能拿到我们当场递给它的那一条 URI，拿不到目录。 -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <activity
             android:name=".MainActivity"

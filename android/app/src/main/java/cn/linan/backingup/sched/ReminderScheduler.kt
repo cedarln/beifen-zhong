@@ -21,7 +21,9 @@ import java.util.concurrent.TimeUnit
 
 /**
  * 本地调度：AlarmManager 精确闹钟（真正按时）+ WorkManager（可延迟，只兜底）。
- * 没有 FCM，也没有 INTERNET 权限——她只存在于这台手机上，这条既是设定也是红线。
+ * 没有 FCM，也不许有网络约束的 Job——她只存在于这台手机上，这条既是设定也是红线。
+ * 本包唯一的网络调用在 update/UpdateChecker.kt（设置页那颗「检查更新」），
+ * 它不在这条链路上，也不被这里引用；越界由 NetworkBoundaryTest 判失败。
  *
  * 文案一律由调用方从剧本带进来（wait 节点的 first_line_after_wait / signal_line）。
  * 这个类不许自己写任何一句她的话：引擎不发明内容，通知也不行。
