@@ -12,6 +12,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import cn.linan.backingup.sched.ReminderScheduler
 import cn.linan.backingup.sched.WakeGate
 import cn.linan.backingup.ui.GameScreen
@@ -58,6 +60,18 @@ class MainActivity : ComponentActivity() {
         // 引擎不许碰 Activity，但授权弹窗只有 Activity 能弹——所以把它作为回调交给 VM，
         // d1_n140 的『允许』按钮由此落到真实系统弹窗，而不是我们自己伪造的"已允许"
         vm.grantRequester = { requestNotifyThenResolve() }
+        // 贴边（edge-to-edge）在 Android 15 上是**强制**的，不是风格选择：
+        // targetSdk 35 之后 `statusBarColor` / `navigationBarColor` 直接被系统忽略，
+        // 内容会画到状态栏和导航条底下。真机上撞到的现象是 D1 第三个选项压在虚拟键上按不到
+        // （见 docs/07 第五节第 4 条）。所以这里主动 opt-in 一次，让 26–35 走同一条路：
+        // 系统栏透明、内容自己按 [WindowInsets.safeDrawing] 让位——
+        // 在 34 及以下这些 inset 本来就是 0，加一次不会多挤一行。
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            // 走廊是黑的，图标必须是浅的；这条在 15 上不再由主题里的 statusBarColor 决定
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
         setContent { GameScreen(vm) }
         handleWakeIntent(intent)
     }

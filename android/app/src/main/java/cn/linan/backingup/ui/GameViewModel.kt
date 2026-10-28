@@ -56,6 +56,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     private var lastVoiceNode: String? = null
     private var backgroundSince = 0L
     private var showInvite = false
+    /** 本次开机读盘时转写已有多少行——见 [ViewState.seenAtLaunch] */
+    private var seenAtLaunch = 0
 
     private val _state = MutableStateFlow(ViewState())
     val state: StateFlow<ViewState> = _state.asStateFlow()
@@ -71,6 +73,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch {
             save = store.read()
+            // 先记下"这次开机之前她已经说过多少行"。会话页拿它把历史一次性上屏，
+            // 只对这一次新说的话逐条浮现——否则玩到后面每次重开都要把前面几章重演一遍。
+            seenAtLaunch = save.transcript.size
             loaded.complete(Unit)
             clock = GameClock.restore(save.installAt, save.rate, save.offset)
             ambienceOn = settings.ambienceEnabled()
@@ -457,6 +462,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             ready = true,
             showAmbienceInvite = showInvite,
             transcript = save.transcript.toList(),
+            seenAtLaunch = seenAtLaunch,
             halt = halt,
             metrics = save.metrics.snapshot(),
             chapter = save.chapter,
@@ -582,6 +588,12 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     data class ViewState(
         val ready: Boolean = false,
         val transcript: List<TranscriptLine> = emptyList(),
+        /**
+         * 本次开机**读盘时**转写里已经有多少行。
+         * 会话页靠它区分"她已经说过的历史"和"这一次新说的话"：历史一次性上屏，
+         * 新说的才逐条浮现。没有这个数，玩到 D7 之后每次重开 App 都要把七章重演一遍。
+         */
+        val seenAtLaunch: Int = 0,
         val halt: StoryEngine.Halt? = null,
         val metrics: String = "",
         val chapter: Int = 1,

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -73,6 +74,18 @@ fun GameScreen(vm: GameViewModel) {
     val entry = vm.uiEntryNode()
     var confirmHangup by remember { mutableStateOf(false) }
 
+    // 冷启动先"已经看见"历史：读盘之前就在那儿的行一次性上屏。
+    // 少了这一步，玩到 D6 之后每次重开 App 都会把前面几章逐条重演一遍——
+    // 玩家看到的是"打开游戏先卡两分钟看回放"，而设计里那两分钟只属于第一次遇见她。
+    // 这条必须排在下面那个逐条浮现的 effect **之前**：同一轮 recomposition 里
+    // LaunchedEffect 按声明顺序起跑，晚一步历史就已经开始一条一条往外蹦了。
+    LaunchedEffect(state.ready) {
+        if (state.ready) {
+            val history = minOf(state.seenAtLaunch, state.transcript.size)
+            if (history > revealed) revealed = history
+        }
+    }
+
     // 新气泡按 delay_ms 逐条出现；点一下会话区 = 承认自己在跳演出，只跳节拍不跳时间
     LaunchedEffect(state.transcript.size, state.rate, state.ready) {
         while (revealed < state.transcript.size) {
@@ -104,6 +117,10 @@ fun GameScreen(vm: GameViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
+                // 贴边之后由我们自己让位：状态栏、刘海、虚拟键、键盘都算在 safeDrawing 里
+                // （是并集，不会在底部叠出两段空白）。真机上第三个选项压在导航条上按不到，
+                // 就是少了这一行——见 docs/07 第五节第 4 条。
+                .safeDrawingPadding()
                 .padding(horizontal = 14.dp),
         ) {
             TopBar(
@@ -120,8 +137,16 @@ fun GameScreen(vm: GameViewModel) {
             )
 
             val listState = rememberLazyListState()
+            var lastRevealed by remember { mutableIntStateOf(0) }
             LaunchedEffect(revealed, typing) {
-                if (revealed > 0) listState.animateScrollToItem((revealed - 1).coerceAtLeast(0))
+                if (revealed > 0) {
+                    val jump = revealed - lastRevealed
+                    lastRevealed = revealed
+                    val target = (revealed - 1).coerceAtLeast(0)
+                    // 冷启动那一次是整段历史一起出现的，动画滚过去要好几秒；跳得远就直接落
+                    if (jump > SCROLL_JUMP_TO_INSTANT) listState.scrollToItem(target)
+                    else listState.animateScrollToItem(target)
+                }
             }
             Box(
                 Modifier
@@ -590,6 +615,8 @@ private fun humanRemaining(ms: Long): String {
 private const val MAX_TYPING_MS = 12_000L
 private const val LINE_GAP_MS = 600L
 private const val TAP_WINDOW_MS = 1_500L
+/** 一次新增超过这么多行就不做滚动动画（冷启动把历史一次性上屏就是这种跳变） */
+private const val SCROLL_JUMP_TO_INSTANT = 6
 private const val TAPS_FOR_BACKDOOR = 5
 private const val BACKDOOR_PASSCODE = "307"
 

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Compose 自己管颜色，框架主题只负责"没有 ActionBar + 黑底不闪白" -->
+    <!-- Compose 自己管颜色，框架主题只负责"没有 ActionBar + 黑底不闪白"。
+         注意：下面两条颜色在 Android 15（targetSdk 35）上**已被系统忽略**，
+         贴边是强制的——真正让位的是 MainActivity 里的 setDecorFitsSystemWindows(false)
+         加各页根容器的 safeDrawingPadding()。这里留着只为 API 26–34 服务。 -->
     <style name="Theme.BackingUp" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/corridor_dark</item>
         <item name="android:statusBarColor">@color/corridor_dark</item>

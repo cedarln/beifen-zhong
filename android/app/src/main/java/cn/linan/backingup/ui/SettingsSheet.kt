@@ -1,5 +1,7 @@
 package cn.linan.backingup.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -20,8 +23,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import cn.linan.backingup.BuildConfig
 import cn.linan.backingup.audio.AmbienceDirector
 
 /**
@@ -38,6 +46,8 @@ fun SettingsSheet(vm: GameViewModel, onDismiss: () -> Unit) {
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            // 让位必须在滚动容器**外面**：写进滚动内容里，第一行一滚就滑到状态栏底下了
+            .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -127,11 +137,37 @@ fun SettingsSheet(vm: GameViewModel, onDismiss: () -> Unit) {
 
         Block("关于这一版") {
             Text(
-                "v0.1 · 剧本 ${vm.scriptNodeCount} 个节点全部来自 script/*.json，改剧本不用重编包。" +
+                // 版本号从 BuildConfig 来：写死一次，下一次打补丁就忘了改，玩家看到的永远是 v0.1
+                "v${BuildConfig.VERSION_NAME} · 剧本 ${vm.scriptNodeCount} 个节点全部来自 script/*.json，改剧本不用重编包。" +
                         "存档只在这台手机上，卸载即真的消失。",
                 style = MaterialTheme.typography.labelSmall,
                 color = InkColors.dim,
             )
+            // 更新入口。她上不了网——本包没有 INTERNET 权限，所以"自动检查更新"这件事做不了，
+            // 也不该做：一个声称只活在这台手机缓存里的角色，不该在背后悄悄联网问服务器"有新版吗"。
+            // 能做的只有把出处交给你：点下去走的是**系统浏览器**，网络是你的手机在走，不是她。
+            var updateNote by remember { mutableStateOf<String?>(null) }
+            val context = LocalContext.current
+            TextButton(
+                onClick = {
+                    val sent = runCatching {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(RELEASES_URL))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }.isSuccess
+                    updateNote = if (sent) null
+                        else "这台机器上没有能打开网页的应用。出处是 $RELEASES_URL"
+                },
+            ) { Text("看有没有新版", color = InkColors.pipe) }
+            Text(
+                "覆盖安装即可，进度不会丢（卸载才会）。",
+                style = MaterialTheme.typography.labelSmall,
+                color = InkColors.dim,
+            )
+            updateNote?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = InkColors.emergency)
+            }
             if (state.ambienceOn) {
                 Text(
                     "声床节拍 ${"%.1f".format(AmbienceDirector.TICK_MS / 1000.0)}s 一次，斜坡最多 " +
@@ -152,3 +188,10 @@ private fun Block(title: String, content: @Composable () -> Unit) {
         content()
     }
 }
+
+/**
+ * 发布页。本包没有 INTERNET 权限，这个链接只是交给**系统浏览器**去打开——
+ * 走网络的是你的手机，不是她。这也是"更新入口"能做到的全部：
+ * 没有联网检查，只有把出处放在你找得到的地方。
+ */
+private const val RELEASES_URL = "https://github.com/cedarln/beifen-zhong/releases"
