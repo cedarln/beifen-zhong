@@ -357,7 +357,11 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                         "失真节点 ${save.skippedWaits.joinToString("、")}｜" +
                         "倍率 ${clock.rate}×")
                 appendLine("─".repeat(40))
-                save.transcript.forEach { line ->
+                // 屏幕上有分隔，导出也必须有一份：这份 txt 是她"以文本形式活着"的证据，
+                // 里面每一条等待都是真等过的，不该被压成一封连续的短信
+                val gaps = TimeGaps.gaps(save.transcript)
+                save.transcript.forEachIndexed { i, line ->
+                    gaps[i]?.let { appendLine("─".repeat(12) + " $it " + "─".repeat(12)) }
                     val marks = buildString {
                         if (line.debug) append("〔DBG〕")
                         if (line.skipped) append("〔已跳过〕")

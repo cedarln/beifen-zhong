@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -154,9 +154,17 @@ fun GameScreen(vm: GameViewModel) {
                     .fillMaxWidth()
                     .clickable { revealed = state.transcript.size },
             ) {
+                // 往回翻的时候标出"这里空过一段时间"：纯表现层，靠相邻两条的时间差算，
+                // 老存档装上就有分隔，不用清档（判据与三条设计决定见 TimeGaps 的文件头）
+                val shown = state.transcript.take(revealed)
+                val gaps = remember(shown.size) { TimeGaps.gaps(shown) }
                 LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(state.transcript.take(revealed)) { line ->
-                        Bubble(line)
+                    itemsIndexed(shown) { index, line ->
+                        val gap = gaps.getOrNull(index)
+                        Column {
+                            if (gap != null) GapDivider(gap)
+                            Bubble(line)
+                        }
                     }
                     if (typing) item { TypingIndicator() }
                 }
@@ -252,6 +260,34 @@ private fun TopBar(
         TextButton(onClick = onSettings) {
             Text("设置", color = InkColors.dim, style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
+
+// ── 时间分隔 ────────────────────────────────────────────────────────────────
+
+/**
+ * 「过了 3 分钟」那一行。
+ *
+ * 它故意**不是**系统消息：系统消息来自剧本，是剧情里的机器在说话，有框有边；
+ * 这一行是界面的读尺，只负责让玩家往回翻时知道中间断过一次。
+ * 所以它比系统消息更淡、没有边框，两条细线夹在中间——一眼能看见，又不抢她的话。
+ */
+@Composable
+private fun GapDivider(text: String) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(Modifier.weight(1f).height(1.dp).background(InkColors.panel))
+        Text(
+            text,
+            style = MaterialTheme.typography.labelSmall,
+            color = InkColors.dim,
+        )
+        Box(Modifier.weight(1f).height(1.dp).background(InkColors.panel))
     }
 }
 
