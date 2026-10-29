@@ -93,6 +93,9 @@ class ChapterGateTest {
 
                 is StoryEngine.Halt.AwaitingWait -> engine.resolveWait(save, clock, forced = true)
                 is StoryEngine.Halt.AwaitingInput -> engine.playerSays(save, clock, "。")
+                // 走查取的是每组选项的第一条，D2 那条"我有名字"轮不到，这里只是把话说全：
+                // 真撞上了就给她一个名字，两条路线都不该让走查卡住
+                is StoryEngine.Halt.AwaitingCapture -> engine.submitCapture(save, clock, "临安")
                 is StoryEngine.Halt.AwaitingGrant -> engine.resolveGrant(save, clock, granted = true)
                 is StoryEngine.Halt.DeadEnd -> error("跨章走查卡在 ${halt.nodeId}：${halt.why}\n$trace")
                 is StoryEngine.Halt.Paused -> return   // 结局页：这一局走完了
@@ -267,6 +270,7 @@ class ChapterGateTest {
 
                 is StoryEngine.Halt.AwaitingWait -> engine.resolveWait(save, clock, forced = true)
                 is StoryEngine.Halt.AwaitingInput -> engine.playerSays(save, clock, "。")
+                is StoryEngine.Halt.AwaitingCapture -> engine.submitCapture(save, clock, "临安")
                 is StoryEngine.Halt.AwaitingGrant -> engine.resolveGrant(save, clock, granted = true)
                 is StoryEngine.Halt.DeadEnd -> error("D1 走不完：${halt.nodeId} ${halt.why}")
                 is StoryEngine.Halt.Paused -> return Triple(save, clock, engine)

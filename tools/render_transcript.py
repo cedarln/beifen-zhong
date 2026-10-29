@@ -101,14 +101,26 @@ def render(path, out=sys.stdout):
             sig = f"  `⟨{n['signal']}⟩`" if n.get("signal") else ""
             for i, line in enumerate(bubbles(n)):
                 out.write(f"**{who if i == 0 else '　'}**　{line}{sig if i == 0 else ''}\n\n")
+            cap = n.get("capture")
+            if isinstance(cap, dict):
+                # 这一幕在屏上是一个输入框。它问的那句话就是上面的 text，提示就是 hint——
+                # 实录里把两样都写出来，主编才看得出"引擎没有替她编问题"
+                out.write(
+                    f"*〔停在这里等玩家输入 → `variables.{cap.get('variable')}`"
+                    f"（{cap.get('min_len')}–{cap.get('max_len')} 字）｜输入框那行小字：{cap.get('hint', '')}〕*\n\n"
+                )
             for cl in ([n["conditional_line"]] if isinstance(n.get("conditional_line"), dict) else []) + \
                       (n.get("conditional_lines") or []):
-                cond, extra = cl.get("if"), None
-                if cl.get("append_text"):
-                    extra = "追加：" + "".join(cl["append_text"])
-                elif cl.get("replace_text"):
-                    extra = "整段替换：" + "".join(cl["replace_text"])
-                out.write(f"*〔条件 {cond} → {extra}〕*\n\n")
+                cond = cl.get("if")
+                for key, label in (("replace_text", "整段替换为"), ("append_text", "追加")):
+                    v = cl.get(key)
+                    if not v:
+                        continue
+                    lines = v if isinstance(v, list) else [v]
+                    out.write(f"*〔条件 `{cond}` 命中时{label}：〕*\n\n")
+                    for s in lines:
+                        out.write(f"> {s}\n>\n")
+                    out.write("\n")
             if n.get("needs"):
                 out.write(f"*〔闸门 {n['needs']}，否则 → `{n.get('fallback_id')}`〕*\n\n")
             if n.get("effects"):
@@ -131,7 +143,13 @@ def render(path, out=sys.stdout):
         out.write(f"- **走不到（多半是孤儿，须接边）**：{', '.join('`' + u + '`' for u in unreached)}\n")
     else:
         out.write("- 无孤儿节点：本章从开场到结局连通\n")
-    out.write("- 变量 `{{device_date}}` / `{{player_name}}` / `{{tomorrow_weekday_cn}}` 由引擎在渲染时替换\n")
+    out.write(
+        "- 变量由引擎在**贴进气泡的那一刻**替换：`{{device_date}}` / `{{tomorrow_date}}` / "
+        "`{{tomorrow_weekday_cn}}` 按游戏时钟现算，`{{player_name}}` 取玩家在 capture 节点输入的值"
+        "（没输入时取本章 `variables.player_name.unset_value`，那是剧本已经演过的一种称呼）。"
+        "未替换的 `{{x}}` 出现在屏幕上即判为 bug——判据在 `TemplateTest` 与 "
+        "`tools/validate_script.py` 的变量闭合规则\n"
+    )
 
 
 if __name__ == "__main__":

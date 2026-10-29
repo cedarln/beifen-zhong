@@ -1,5 +1,6 @@
 package cn.linan.backingup.engine
 
+import cn.linan.backingup.story.Capture
 import cn.linan.backingup.story.Node
 import cn.linan.backingup.story.ScriptRepository
 
@@ -26,6 +27,12 @@ class StoryEngine(
         data class AwaitingChoice(val node: Node, val options: List<ChoiceOption>) : Halt
         data class AwaitingWait(val node: Node, val dueGameTime: Long) : Halt
         data class AwaitingInput(val node: Node, val wordLimit: Int) : Halt
+        /**
+         * 等她手里那件东西：玩家输入一个值（D2 的名字），本节点的台词已经演完了。
+         * 与 [AwaitingInput] 的区别不是字数，是去向——那句话进转写，这个值进 `variables`，
+         * 此后她的台词用 [cn.linan.backingup.engine.Template] 把它念出来。
+         */
+        data class AwaitingCapture(val node: Node, val capture: Capture) : Halt
         /** d1_n140：唯一的"设备权限即剧情"节点。允许/拒绝都是剧情，不是弹窗 */
         data class AwaitingGrant(val node: Node) : Halt
         data class Paused(val node: Node) : Halt
@@ -101,6 +108,12 @@ class StoryEngine(
             }
 
             if (node.isGrant) return Halt.AwaitingGrant(node)
+            // 她这一句要玩家输入一个值（D2 的名字）。台词刚刚贴完，停在这里等。
+            // 已经有值就不再问：二周目、后门传送重走 D2 都不该让她再要一次名字——
+            // "我念了一遍"这件事只发生一次，问第二遍就成了一句假话。
+            node.capture?.let { cap ->
+                if (save.variables[cap.variable].isNullOrBlank()) return Halt.AwaitingCapture(node, cap)
+            }
             if (node.sendAllowance() > 0 && node.type != "wait") {
                 return Halt.AwaitingInput(node, node.wordLimit ?: DEFAULT_WORD_LIMIT)
             }
@@ -155,7 +168,7 @@ class StoryEngine(
         if (forced && node.fastModeSummary != null) {
             save.transcript.add(
                 TranscriptLine(
-                    node.id, SPEAKER_SYSTEM, node.fastModeSummary,
+                    node.id, SPEAKER_SYSTEM, render(save, clock.gameTime(), node.fastModeSummary),
                     clock.gameTime(), kind = "wait_summary", debug = true,
                 )
             )
@@ -171,7 +184,7 @@ class StoryEngine(
         node.firstLineAfterWait?.let { line ->
             save.transcript.add(
                 TranscriptLine(
-                    node.id, node.speaker ?: SPEAKER_HER, line,
+                    node.id, node.speaker ?: SPEAKER_HER, render(save, clock.gameTime(), line),
                     clock.gameTime(), kind = "her",
                     debug = forced, skipped = forced,
                 )
@@ -238,7 +251,10 @@ class StoryEngine(
     fun nextChapterOpeningLine(save: SaveFile, clock: GameClock): String? {
         chapterOpensAt(save) ?: return null
         val entry = repo.chapterEntry(save.chapter + 1) ?: return null
-        return entry.resolvedText(condition(save, clock)).firstOrNull()
+        // 通知栏那句也必须渲染过：D3 的入口第一句带着 {{player_name}}，
+        // 没渲染就是把她没说的话挂到玩家的通知栏里，那条还撤不回来
+        return render(save, clock.gameTime(), entry.resolvedText(condition(save, clock)).firstOrNull() ?: "")
+            .ifBlank { null }
     }
 
     /**
@@ -283,6 +299,30 @@ class StoryEngine(
         save.flags[if (granted) FLAG_NOTIFY_GRANTED else FLAG_NOTIFY_DENIED] = true
         val then = branch?.then ?: node.next ?: node.then
             ?: return Halt.DeadEnd(node.id, "授权分支没有落点（剧本事故）")
+        return advance(save, clock, then)
+    }
+
+    /**
+     * 玩家把那个值给了她（D2：名字）。
+     *
+     * 空手按发送不算：`min_len` 以下什么都不写、也不推进——她那句"你说。"还悬在那儿，
+     * 这时候替玩家填一个默认称呼等于替他说了一句他没说的话。
+     * 清洗规则全在 [Template.sanitizeInput]（去换行、限长、剥花括号），
+     * 存档里因此永远不会出现能被子替换的串。
+     *
+     * @return 没在等待输入、或输入清洗后为空时返回当前 halt 语义下的 [Halt.AwaitingCapture]
+     */
+    fun submitCapture(save: SaveFile, clock: GameClock, raw: String): Halt {
+        val node = save.nodeId?.let { repo.node(it) }
+            ?: return Halt.DeadEnd(save.nodeId ?: "", "当前节点不存在")
+        val cap = node.capture ?: return Halt.DeadEnd(node.id, "本节点没有 capture，不该走到这里")
+        val value = Template.sanitizeInput(raw, cap.maxLen)
+        if (value.length < cap.minLen.coerceAtLeast(1)) {
+            return Halt.AwaitingCapture(node, cap)
+        }
+        save.variables[cap.variable] = value
+        val then = node.next ?: node.then
+            ?: return Halt.DeadEnd(node.id, "capture 节点没有出边（剧本事故）")
         return advance(save, clock, then)
     }
 
@@ -417,8 +457,9 @@ class StoryEngine(
         }
         val debug = node.signal != null && signals.isOverridden(node.signal!!)
         val typing = node.typingMsFor()
-        for ((i, line) in lines.withIndex()) {
+        for ((i, raw) in lines.withIndex()) {
             // 只有第一条前面挂"正在输入"：她一次说三句是连着的，不是一句想三回
+            val line = render(save, clock.gameTime(), raw)
             save.transcript.add(
                 TranscriptLine(node.id, speaker, line, clock.gameTime(), kind, debug, typingMs = if (i == 0) typing else 0L)
             )
@@ -443,7 +484,9 @@ class StoryEngine(
         node.postExitNotification?.let { post ->
             if (post.text.isNotBlank() && save.pendingNotifications.none { it.node == node.id }) {
                 save.pendingNotifications.add(
-                    PendingNotice(node.id, post.delayMs, post.text, post.onlyIf)
+                    // 补投的那一条是通知栏里的，不是屏上的：照样得渲染过才能存。
+                    // 通知里出现 {{player_name}} 比屏上出现更难撤——它已经挂在系统里了
+                    PendingNotice(node.id, post.delayMs, render(save, clock.gameTime(), post.text), post.onlyIf)
                 )
             }
         }
@@ -472,8 +515,63 @@ class StoryEngine(
                 since != null && System.currentTimeMillis() - since >= SILENCE_GATE_MS
             },
             SCREEN_OFF_LETTERS_CONDITION to { allScreenOffLettersRead(save) },
+            // 「他给过她名字吗」——剧本用它决定 D5 那句"昨天你跟我说你叫…"要不要换成
+            // note 里写好的另一种说法。名字本身在 variables 里，这里只是把它翻译成一个判据，
+            // 所以不许再造一个 flag 存第二份真相（`player_named == false` 就是它的反面）。
+            "player_named" to { save.variables["player_name"]?.isNotBlank() == true },
         ),
     )
+
+    /**
+     * 此刻能拿到的变量值。系统类每次现算（按游戏时钟那一刻），玩家给的那部分从存档取。
+     *
+     * 空白值当没有：输入框里敲一个空格不等于给她起了个名字。
+     */
+    private fun vars(save: SaveFile, atGameTime: Long): Map<String, String> =
+        Template.varsFor(save.variables, atGameTime)
+
+    /**
+     * 剧本里的一句 → 屏幕上的一句。
+     *
+     * 单遍替换，取不到值时落到剧本声明的 `unset_value`（见 [Template] 的三条规则）。
+     * 这一句必须在 **emit 的那一刻**做完：转写是历史，历史要冻结在当时——
+     * D1 那句"明天是 星期四"存进去之后，玩家过几天再往回翻，它还得是星期四。
+     */
+    private fun render(save: SaveFile, atGameTime: Long, text: String): String =
+        Template.render(text, vars(save, atGameTime)) { repo.variableUnsetValue(it) }
+
+    /**
+     * 给调度层用的公开版：等待闹钟、章间闹钟、退出后补投的那几条通知，
+     * 念出来的必须和屏上的是同一句话。
+     */
+    fun renderNotification(save: SaveFile, atGameTime: Long, text: String): String =
+        render(save, atGameTime, text)
+
+    /**
+     * 修老存档：v0.1.5 及之前的包里根本没有变量替换，转写里存的是**没渲染过的原文**。
+     *
+     * 不修的话，撞上这个 bug 的玩家升级之后，往回翻还是看见「{{player_name}}。」——
+     * 屏幕上的代码不会因为发了一版修复就自己消失。每条气泡带着自己的 `gameTime`
+     * （[TranscriptLine.gameTime]），所以日期类变量能按**当时**那天重算，
+     * 修完的历史和当初渲染出来的一模一样。
+     *
+     * 幂等：渲染过的行里没有 `{{`，第二遍原样返回。
+     *
+     * @return 改动的行数（0 = 这个存档不需要修）
+     */
+    fun repairUnrenderedTranscript(save: SaveFile): Int {
+        var fixed = 0
+        save.transcript.forEachIndexed { i, line ->
+            if (!Template.names(line.text).isEmpty()) {
+                val rendered = render(save, line.gameTime, line.text)
+                if (rendered != line.text) {
+                    save.transcript[i] = line.copy(text = rendered)
+                    fixed++
+                }
+            }
+        }
+        return fixed
+    }
 
     /** 灭屏信 = 剧本里 signal=screen_off 的信；跨章取全集，因为那三封分散在 D2/D5/D7 */
     private fun allScreenOffLettersRead(save: SaveFile): Boolean {

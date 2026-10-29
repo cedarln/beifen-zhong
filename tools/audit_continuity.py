@@ -83,7 +83,10 @@ def flag_inventory(chapters):
                     used_flags.setdefault(k, set()).add(n["id"])
             for cl in conditionals(n):
                 expr = cl.get("if") or ""
-                for tok in [t for t in re.findall(r"[a-z_]{3,}", expr) if t not in METRICS]:
+                # true/false 是字面量不是 flag 名：剧本里 `player_named == false` 这种写法
+                # 是合法判定（StateCondition 的 NAMED_EQ 认它），别把它当成"未登记的世界事实"
+                for tok in [t for t in re.findall(r"[a-z_]{3,}", expr)
+                            if t not in METRICS and t not in ("true", "false")]:
                     used_flags.setdefault(tok, set()).add(f"{n['id']} (cond)")
     return set_flags, used_flags
 
@@ -231,7 +234,7 @@ def main():
     print("\n[D] 跨章回指对账")
     pairs = [
         ("d1_n122", "avoided_date_question", "d6_n602", "D1 回避日期 → D6 她自己想起"),
-        ("d2_c205", "told_her_name", "d6/d7 称呼", "D2 告知名字 → 之后她每章第一句叫你"),
+        ("d2_n219", "player_named", "d5_n500 首句", "D2 把名字打给她 → 之后她念得出你（引擎读 variables.player_name）"),
         ("d3 夜窗", "missed_d3_night_window", "d6_n603b", "D3 错过 → D6 她说'你那天晚上没来'"),
         ("d5_c09", "box_kept_closed", "d7_n710_gate", "D5 别开 → D7 那六秒语音"),
         ("d6_c620", "accomplice", "d7_n740_gate", "D6 共犯 → D7 审判"),

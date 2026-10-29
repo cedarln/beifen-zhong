@@ -42,10 +42,11 @@ class ScriptWalkTest {
                 assertTrue("${node.id} 的 type 不在契约的七种里：${node.type}", node.type in NODE_TYPES)
             }
         }
-        // 182 = 结构文档的 179 + 发布前复审拆出来的三个长气泡（d5_n510b / d5_n513b / d5_n545b）。
+        // 182 = 结构文档的 179 + 发布前复审拆出来的三个长气泡（d5_n510b / d5_n513b / d5_n545b）；
+        // 183 = 再加 v0.1.6 的 d2_n219（她问名字那一句，capture 节点）。
         // 拆节点是为了手机上不出现一整面墙，改完必须回到这里改总数：这条断言的作用
         // 不是"数字对得上"，是"任何增删都要被看见一次"。
-        assertEquals("全篇节点数与结构文档不符", 182, seen.size)
+        assertEquals("全篇节点数与结构文档不符", 183, seen.size)
     }
 
     @Test

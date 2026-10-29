@@ -23,6 +23,13 @@ data class SaveFile(
     var metrics: Metrics = Metrics(),
     var flags: MutableMap<String, Boolean> = mutableMapOf(),
     var counters: MutableMap<String, Int> = mutableMapOf(),
+    /**
+     * 玩家亲手给过的值（目前只有 `player_name`）。剧本里 `{{x}}` 的运行时那一半。
+     *
+     * 与 flags/counters 分开是因为语义不同：那两个是"发生过什么"，这个是"她怎么称呼你"，
+     * 要参与文本渲染。系统类变量（日期）不进这里——它们每次现算，存下来就会过期。
+     */
+    var variables: MutableMap<String, String> = mutableMapOf(),
     var transcript: MutableList<TranscriptLine> = mutableListOf(),
     /** 玩家层快速模式：通关一次后解锁；结局《备份》的前置条件之一 */
     var quickMode: Boolean = false,
@@ -73,6 +80,7 @@ data class SaveFile(
     fun copyEmpty(): SaveFile = copy(
         installAt = installAt, metrics = Metrics(), flags = mutableMapOf(),
         counters = mutableMapOf(), transcript = mutableListOf(), nodeId = null,
+        variables = mutableMapOf(),
         waitSendsUsed = 0, farewellSentFor = null, silenceSince = null,
         chapterEndAtGameTime = null,
         pendingNotifications = mutableListOf(), skippedMs = 0L, skippedWaits = mutableListOf(),

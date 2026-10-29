@@ -82,6 +82,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             // v0.1.5 之前没有"章与章之间的门"：已经读完某章的存档里没有那个锚点，
             // 不补就会永远停在"她那边还在过时间"。这是我们后补规则的债，不让她再等一早上。
             engine.seedChapterAnchor(save, clock)
+            // v0.1.5 及之前的存档里存的是**没替换过变量**的原文（那会儿引擎根本没有替换）。
+            // 升级后往回翻还会看见「{{player_name}}。」，所以读盘时按每行自己的 gameTime 重算一遍。
+            engine.repairUnrenderedTranscript(save)
             ambienceOn = settings.ambienceEnabled()
             nightDeliveryOn = settings.nightDeliveryEnabled()
             showInvite = !ambienceOn && !settings.ambienceInvited()
@@ -157,6 +160,12 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
      * 这里只负责把 UI 的输入框清空——演出层不该自己决定"这句话算不算数"。
      */
     fun sendPlayerLine(text: String) = mutate { s, eng -> eng.playerSays(s, clock, text) }
+
+    /**
+     * D2 那个"你叫什么"的回答。走的是 [StoryEngine.submitCapture]，不是 [sendPlayerLine]：
+     * 这句话不进转写（它是存档里的一个值，不是她听见的一句），也不消耗每日配额。
+     */
+    fun submitCapture(text: String) = mutate { s, eng -> eng.submitCapture(s, clock, text) }
 
     /**
      * d1_n140 的『允许』。真正的系统弹窗由 Activity 提供（引擎层不许长出手去碰 Activity），
@@ -585,7 +594,12 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     /** 等待只声明 duration_ms，唤醒由时钟层算差值；exact 被拒时在状态里标出来 */
     private fun armWait(save: SaveFile, halt: StoryEngine.Halt.AwaitingWait) {
         val remaining = clock.remaining(halt.dueGameTime)
-        val text = halt.node.firstLineAfterWait ?: return
+        // 通知栏那句必须和屏上那句是同一句话：剧本里等待后第一句常带 {{device_date}}
+        // 这类变量，直接拿原文去排闹钟，玩家在锁屏上看见的就是代码。
+        // 日期按**到点那一刻**算——她约的是"明天见"，通知却是今天早上发的，
+        // 用 now 渲染会让"明天是周四"在她真回来那天变成周三。
+        val raw = halt.node.firstLineAfterWait ?: return
+        val text = engine.renderNotification(save, halt.dueGameTime, raw)
         val ref = halt.node.waitRef ?: halt.node.id
         // 已经在系统里挂着的闹钟不要重排：publish 每次状态变动都会走到这里，
         // 重排等于反复替换同一个 PendingIntent，并把兜底 worker 的 5 分钟一直往后推——

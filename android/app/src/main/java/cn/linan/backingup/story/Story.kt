@@ -23,6 +23,16 @@ data class Script(
 ) {
     /** 章内节点索引：全篇节点全量加载后按 id 取，比每次线性找划算 */
     val nodeById: Map<String, Node> by lazy { nodes.associateBy { it.id } }
+
+    /**
+     * 顶层 `variables.<名>.unset_value`：这一章没走到赋值点时，她拿什么顶上。
+     *
+     * 剧本里唯一用到它的是 `player_name`——D2 的 `d2_n220` 已经写好了答案（她先叫你「喂」），
+     * 所以"没给名字"不是引擎要现场编的情况，是剧本已经演过的一种关系。
+     */
+    fun unsetValue(name: String): String? =
+        variables[name]?.takeIf { it.isJsonObject }?.asJsonObject
+            ?.get("unset_value")?.takeIf { it.isJsonPrimitive }?.asString
 }
 
 data class Meta(
@@ -55,6 +65,26 @@ data class AmbienceSegment(
     val gain: Map<String, Double> = emptyMap(),
     val note: String = "",
     val fadeMs: Long? = null,
+)
+
+/**
+ * 玩家输入一个值，此后她要念出来（D2 c5 那句"我有名字。你拿去用。"）。
+ *
+ * 为什么要有这个契约而不是在代码里弹个框问名字：这部作品的规矩是
+ * **引擎不发明内容**——问她"叫什么"的那句话必须是剧本写的（就是本节点的 `text`），
+ * 输入框下面那行提示也必须来自 [hint]。代码只负责停下来等、清洗、写进存档。
+ *
+ * 清洗规则在 `Template.sanitizeInput`：去换行、限长、剥掉花括号。
+ */
+data class Capture(
+    /** 写进 `save.variables` 的哪个名字，同时也是 `{{x}}` 里的那个 x */
+    val variable: String = "",
+    val maxLen: Int = 12,
+    /** 少于这个字数不算输入（空手按发送不许推进） */
+    val minLen: Int = 1,
+    /** 输入框下面那行小字：字数、能不能反悔，玩家得在敲之前知道 */
+    val hint: String = "",
+    val note: String? = null,
 )
 
 data class Choice(
@@ -142,6 +172,11 @@ data class Node(
     val fastModeSummary: String? = null,
     val fastModeSkippable: Boolean? = null,
     val wordLimit: Int? = null,
+    /**
+     * 玩家输入契约（[Capture]）。有值 = 本节点的台词演完之后停下来等一句话，
+     * 拿到之后写进 `save.variables`，再走 `next`。
+     */
+    val capture: Capture? = null,
     val title: String? = null,
 
     // ── 边 ──────────────────────────────────────────────────────────────────

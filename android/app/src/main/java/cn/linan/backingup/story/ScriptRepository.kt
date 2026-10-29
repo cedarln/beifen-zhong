@@ -51,6 +51,17 @@ class ScriptRepository(private val source: ScriptSource) {
     fun chapter(id: String): Script? = chapters.firstOrNull { it.meta.chapterId == id }
 
     /**
+     * 某个 `{{x}}` 在剧本里声明的兜底值（顶层 `variables.x.unset_value`）。
+     * 七章都可能声明，取第一个声明了的——同名变量在两个章里给不同兜底值是剧本事故，
+     * 由 `tools/validate_script.py` 拦，不在这里做仲裁。
+     */
+    fun variableUnsetValue(name: String): String? =
+        chapters.firstNotNullOfOrNull { it.unsetValue(name) }
+
+    /** 全篇声明过的变量名（各章顶层 `variables` 的键并集），给校验测试对着 `Template.KNOWN` 比 */
+    val declaredVariables: Set<String> by lazy { chapters.flatMap { it.variables.keys }.toSet() }
+
+    /**
      * 全篇节点总数，给设置页那行"关于这一版"用。
      * 不写死数字：主编复核把两个长气泡拆开那天，硬编码的 179 就在玩家面前变成了假话。
      */

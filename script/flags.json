@@ -12,7 +12,8 @@
     "quick_mode": "通关后解锁（系统读取）",
     "player_silent": "D6 c610 选沉默后由计时器置位",
     "no_reply_gt_4h": "真实未回复超 4 小时（系统读取）",
-    "missed_d3_night_window": "D3 深夜窗口未命中（按设备时钟判定）"
+    "missed_d3_night_window": "D3 深夜窗口未命中（按设备时钟判定）",
+    "player_named": "D2 d2_n219 玩家把名字打给她（引擎读 save.variables.player_name 非空，不另存一份真相）"
   },
   "story_flags": {
     "avoided_date_question": {
@@ -27,12 +28,6 @@
       "set_at": "d1_c060『墙不可能凭空出现。你累了。』",
       "consumed_by": [
         "d4_n401"
-      ]
-    },
-    "told_her_name": {
-      "set_at": "d2_c205『把自己的名字告诉她』",
-      "consumed_by": [
-        "d3-d7 首句称呼"
       ]
     },
     "box_kept_closed": {

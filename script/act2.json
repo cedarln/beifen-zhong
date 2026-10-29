@@ -4,7 +4,7 @@
     "chapter": 2,
     "chapter_id": "d2",
     "title": "隔壁的人",
-    "version": "0.1.2",
+    "version": "0.1.6",
     "reading_minutes": 14,
     "real_wait_total": "7h15m",
     "start_state": {
@@ -112,8 +112,9 @@
     "player_name": {
       "source": "runtime",
       "type": "string",
-      "set_at": "d2_c215",
-      "note": "c5 选'我有名字。你拿去。'时由玩家输入；此后每章她的第一句调用本变量（引擎拼接 {{player_name}}，圣经 c5 约定）"
+      "set_at": "d2_n219",
+      "unset_value": "喂",
+      "note": "c5 选'我有名字。你拿去用。'时在 d2_n219 由玩家输入；此后她的第一句调用本变量（引擎渲染 {{player_name}}，见 docs/02 第七节）。没走那条路的玩家，d2_n220 里她已经自己定了称呼——「喂」就是 unset_value，不是引擎编的。"
     },
     "avoided_date_question": {
       "source": "runtime",
@@ -192,13 +193,13 @@
         },
         {
           "text": "我有名字。你拿去用。",
-          "to": "d2_n221",
+          "to": "d2_n219",
           "effects": {
             "trust": 10
           }
         }
       ],
-      "note": "对应 docs/02 节点图 c5。第三项命中时引擎弹出名字输入框，写入 variables.player_name；D3 起每章第一句以 {{player_name}} 开头调用。"
+      "note": "对应 docs/02 节点图 c5。第三项命中进 d2_n219——那是一个 capture 节点，玩家在那里把名字打给她；D5 她第一句以 {{player_name}} 开头调用。"
     },
     {
       "id": "d2_n216a",
@@ -234,6 +235,24 @@
         "awareness": 2
       },
       "next": "d2_n220"
+    },
+    {
+      "id": "d2_n219",
+      "type": "message",
+      "speaker": "xiaoman",
+      "text": [
+        "那你打过来。",
+        "一个字一个字打，我数着。"
+      ],
+      "delay_ms": 900,
+      "capture": {
+        "variable": "player_name",
+        "max_len": 12,
+        "min_len": 1,
+        "hint": "最多 12 个字。写下来她就认，改不了"
+      },
+      "note": "c5 契约（docs/02 第七节 capture）：问名字这句是她说的（text），输入框那行小字是 hint，代码只负责停、清洗、写进存档。玩家不填走 d2_n220 的「喂」——两条都是演过的关系，引擎不许替玩家填默认称呼。",
+      "next": "d2_n221"
     },
     {
       "id": "d2_n221",

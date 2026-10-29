@@ -95,6 +95,115 @@ def check_needs(node_id, needs, errs):
             # （若值为字符串且非比较表达式，视为写法不统一）
 
 
+PLACEHOLDER = re.compile(r"\{\{([a-z0-9_]+)\}\}")
+
+# 引擎认识的变量名。**这一份和 android/.../engine/Template.kt 的 KNOWN 必须一模一样**：
+# 剧本写出一个引擎不认识的名字，玩家屏幕上就是一串代码——v0.1.5 之前真的这样漏出去过
+# （D2 的 {{player_name}}、D1 那句"明天是 …"的 {{device_date}}）。
+# 两侧的交叉判据在 TemplateTest：`剧本里出现的占位符引擎全认识，而且就在本章声明过`。
+KNOWN_VARS = {"player_name", "device_date", "tomorrow_date", "tomorrow_weekday_cn"}
+SYSTEM_VARS = {"device_date", "tomorrow_date", "tomorrow_weekday_cn"}
+
+
+def visible_texts(n):
+    """一个节点里所有会被人（玩家或《备份》那份导出文件）看见的句子。
+
+    只扫 text 是不够的：conditional 的替代文案、等待后第一句、快速模式摘要、
+    退出后补投、周年文案池、输入框下面那行 hint——漏一个就是一个能露代码的地方。
+    """
+    out = []
+    for key in ("text", "prompt_text", "confirm_text", "first_line_after_wait",
+                "fast_mode_summary", "signal_line", "farewell_line", "pre_wait_line"):
+        v = n.get(key)
+        if isinstance(v, str):
+            out.append(v)
+        elif isinstance(v, list):
+            out += [s for s in v if isinstance(s, str)]
+    for c in (n.get("conditional_line"), *(n.get("conditional_lines") or [])):
+        if not isinstance(c, dict):
+            continue
+        for key in ("replace_text", "append_text"):
+            v = c.get(key)
+            if isinstance(v, str):
+                out.append(v)
+            elif isinstance(v, list):
+                out += [s for s in v if isinstance(s, str)]
+    pe = n.get("post_exit_notification") or {}
+    if isinstance(pe.get("text"), str):
+        out.append(pe["text"])
+    out += [s for s in (n.get("sample_yearly_lines") or []) if isinstance(s, str)]
+    for ch in n.get("choices") or []:
+        if isinstance(ch.get("text"), str):
+            out.append(ch["text"])
+    cap = n.get("capture") or {}
+    if isinstance(cap.get("hint"), str):
+        out.append(cap["hint"])
+    return out
+
+
+def check_variables(data, errs, warns):
+    """顶层 variables 声明 ↔ 文本里出现的 {{x}} ↔ capture 契约，三方闭合"""
+    declared = data.get("variables") or {}
+    ch = (data.get("meta") or {}).get("chapter")
+    capture_vars = {}
+
+    for n in data.get("nodes", []):
+        nid = n.get("id")
+        cap = n.get("capture")
+        if not cap:
+            continue
+        if not isinstance(cap, dict):
+            errs.append(f"{nid}: capture 必须是对象")
+            continue
+        var = cap.get("variable") or ""
+        capture_vars[var] = nid
+        if not var:
+            errs.append(f"{nid}: capture.variable 为空——引擎不知道该往存档写哪个名字")
+        if var in SYSTEM_VARS:
+            errs.append(f"{nid}: capture 不许指向系统变量 {var}（那是时钟的事，不是玩家能给的）")
+        if var not in declared:
+            errs.append(f"{nid}: capture.variable={var} 没在 D{ch} 章顶层 variables 里声明")
+        if n.get("type") != "message":
+            errs.append(f"{nid}: capture 挂在 type={n.get('type')} 上；问话必须是她的 message")
+        if not (n.get("next") or n.get("then")):
+            errs.append(f"{nid}: capture 节点没有出边，玩家输入完她就卡住")
+        mx, mn = int(cap.get("max_len", 0)), int(cap.get("min_len", 1))
+        if not (1 <= mn <= mx <= 24):
+            errs.append(f"{nid}: capture 字数不合法（min_len={mn}, max_len={mx}），要求 1<=min<=max<=24")
+        if not (cap.get("hint") or "").strip():
+            errs.append(f"{nid}: capture 没写 hint——字数上限和能不能反悔得让玩家在敲之前知道（引擎不许编这行小字）")
+
+    used = defaultdict(set)
+    for n in data.get("nodes", []):
+        for s in visible_texts(n):
+            for name in PLACEHOLDER.findall(s):
+                used[name].add(n.get("id"))
+
+    for name, where in sorted(used.items()):
+        w = sorted(where)[:3]
+        if name not in KNOWN_VARS:
+            errs.append(f"{{{{{name}}}}} 引擎不认识（Template.KNOWN 里没有）：出现于 {w}")
+        if name not in declared:
+            errs.append(f"{{{{{name}}}}} 用在 {w}，但 D{ch} 章顶层没声明这个变量")
+            continue
+        d = declared[name] or {}
+        source = d.get("source")
+        if source == "system" and name not in SYSTEM_VARS:
+            errs.append(f"{name}: 声明成 system 但引擎的 systemVars 不产出它")
+        if source != "system":
+            # 运行时变量必须有来路：要么本章 capture 问玩家要，要么剧本写好"没给时她叫你什么"
+            has_unset = bool((d.get("unset_value") or "").strip())
+            if name not in capture_vars and not has_unset:
+                errs.append(
+                    f"{name}: 用在 {w} 却既没有 capture 节点也没有 unset_value——"
+                    "玩家屏幕上一定会露出代码"
+                )
+
+    unset_only = [k for k, v in declared.items() if isinstance(v, dict) and v.get("unset_value") and k not in used]
+    for k in unset_only:
+        warns.append(f"variables.{k} 写了 unset_value 但本章没有任何 {{{{{k}}}}} 引用（可能是别章在用）")
+
+
 def validate(path):
     errs, warns, msgs = [], [], []
     try:
@@ -293,7 +402,32 @@ def validate(path):
         # 下一条必须是一句成话（不是省略号、不是又一句笑）
         if len(nxt) < 6 or nxt.strip() in ("……", "...") or "哈哈哈哈" in nxt:
             warns.append(f"{nid}: '哈哈哈哈'后未跟真话（圣经规则 8）｜{s}→{nxt[:12]!r}")
+
+    check_variables(data, errs, warns)
     return errs, warns + msgs + [f"（信息）节点 {len(nodes)}，字数 {total_chars}，笑 {laugh} 处"]
+
+
+def check_variable_registry(files):
+    """七章合起来看：同一个变量的兜底值只能有一个答案。
+
+    引擎侧的取法是"第一个声明了 unset_value 的章"（ScriptRepository.variableUnsetValue），
+    所以两处给了不同称呼时，后面那一处永远不会生效——它会安静地骗下一个改剧本的人。
+    """
+    where = defaultdict(set)
+    for p in files:
+        try:
+            with open(p, encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:  # noqa 单个文件解析失败由 validate() 报，这里不重复
+            continue
+        ch = (data.get("meta") or {}).get("chapter", "?")
+        for name, d in (data.get("variables") or {}).items():
+            if isinstance(d, dict) and (d.get("unset_value") or "").strip():
+                where[name].add((ch, d["unset_value"].strip()))
+    return [
+        f"{name} 的兜底值在各章不一致：{sorted(x)}——引擎只认第一个，后面的会被静默忽略"
+        for name, x in sorted(where.items()) if len({v for _, v in x}) > 1
+    ]
 
 
 def main():
@@ -311,6 +445,13 @@ def main():
             print("  PASS：全部硬规则通过")
         else:
             fail = True
+    conflicts = check_variable_registry(files)
+    print("\n=== 变量注册表（跨章） ===")
+    for c in conflicts:
+        print(f"  [FAIL] {c}")
+        fail = True
+    if not conflicts:
+        print("  PASS：同名变量的兜底值各章一致")
     print("\n" + ("存在硬规则违反，需返工。" if fail else "全部文件通过硬规则校验。"))
     return 1 if fail else 0
 

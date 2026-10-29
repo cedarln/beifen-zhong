@@ -4,7 +4,7 @@
     "chapter": 1,
     "chapter_id": "d1",
     "title": "醒来",
-    "version": "0.1.2",
+    "version": "0.1.6",
     "reading_minutes": 12,
     "real_wait_total": "2h20m",
     "start_state": {
@@ -109,6 +109,11 @@
     "tomorrow_weekday_cn": {
       "source": "system",
       "format": "星期一..星期日"
+    },
+    "tomorrow_date": {
+      "source": "system",
+      "format": "yyyy-MM-dd",
+      "note": "d1_n120 那句『明天是 星期几，几号』要的是次日：设备当天那个叫 device_date，写错会让玩家看见一个已经过去的日子"
     },
     "notify_granted": {
       "source": "runtime",
@@ -536,7 +541,7 @@
       "type": "message",
       "speaker": "you",
       "text": [
-        "明天是 {{tomorrow_weekday_cn}}，{{device_date}}。"
+        "明天是 {{tomorrow_weekday_cn}}，{{tomorrow_date}}。"
       ],
       "signal": "device_date",
       "delay_ms": 600,

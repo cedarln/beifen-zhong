@@ -4,7 +4,7 @@
     "chapter": 7,
     "chapter_id": "d7",
     "title": "面试",
-    "version": "0.1.2",
+    "version": "0.1.6",
     "author": "main-editor",
     "reading_minutes": 18,
     "real_wait_total": "57m",
@@ -38,9 +38,9 @@
       "box_kept_closed": "D5 c9；true 才有 d7_n710 的 6 秒音频",
       "accomplice": "D6 c620；决定 d7_n740 是否插入",
       "accomplice_count": "1 或 2；2 会让她在终局不再叫玩家的名字",
-      "told_her_name": "D2 c5；影响她的称呼",
       "notify_denied": "D1 n142；影响本章最后一条消息是否真的送达",
-      "quick_mode": "引擎运行时；《备份》结局的前置"
+      "quick_mode": "引擎运行时；《备份》结局的前置",
+      "player_named": "来自 D2 的 capture 节点 d2_n219；影响她的称呼（引擎读 variables.player_name）"
     },
     "ending_gates": {
       "ending_tomorrow": "c12=道别 且 trust>=60 且 not accomplice",

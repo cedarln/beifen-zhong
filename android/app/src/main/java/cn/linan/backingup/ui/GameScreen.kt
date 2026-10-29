@@ -401,6 +401,7 @@ private fun BottomArea(state: GameViewModel.ViewState, vm: GameViewModel) {
         is StoryEngine.Halt.AwaitingGrant -> GrantArea(halt.node, vm)
         is StoryEngine.Halt.AwaitingWait -> WaitArea(state, halt, vm)
         is StoryEngine.Halt.AwaitingInput -> InputArea(halt, onSend = vm::sendPlayerLine)
+        is StoryEngine.Halt.AwaitingCapture -> CaptureArea(halt, onSend = vm::submitCapture)
         is StoryEngine.Halt.Paused -> PausedArea(halt.node, vm, state)
         is StoryEngine.Halt.DeadEnd -> DeadEndArea(halt, vm)
     }
@@ -508,6 +509,22 @@ private fun InputArea(halt: StoryEngine.Halt.AwaitingInput, onSend: (String) -> 
             placeholder = "你能说的就这些（${halt.wordLimit} 个字）",
             onChange = { if (it.length <= halt.wordLimit) text = it },
             onSend = { onSend(text.trim()); text = "" },
+        )
+    }
+}
+
+@Composable
+private fun CaptureArea(halt: StoryEngine.Halt.AwaitingCapture, onSend: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        InputRow(
+            value = text,
+            limit = halt.capture.maxLen,
+            // 提示那行小字来自剧本（capture.hint），代码只补一句界面事实：
+            // 剧本没写 hint 时总得说清楚"这框是干什么的"，但绝不替她问问题
+            placeholder = halt.capture.hint.ifBlank { "打 ${halt.capture.maxLen} 个字以内，写完就收" },
+            onChange = { if (it.length <= halt.capture.maxLen) text = it },
+            onSend = { onSend(text); text = "" },
         )
     }
 }

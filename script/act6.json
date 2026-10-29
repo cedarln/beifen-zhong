@@ -4,7 +4,7 @@
     "chapter": 6,
     "chapter_id": "d6",
     "title": "公告",
-    "version": "0.1.2",
+    "version": "0.1.6",
     "author": "main-editor",
     "reading_minutes": 16,
     "real_wait_total": "33h",
@@ -40,10 +40,10 @@
     ],
     "flags_expected_from_prior_chapters": {
       "box_kept_closed": "来自 D5 c9；本章不消费，D7 消费",
-      "told_her_name": "来自 D2 c5；影响本章她对玩家的称呼",
       "avoided_date_question": "来自 D1 d1_n122；影响 d6_n602 的一句",
       "missed_d3_night_window": "来自 D3；触发 d6_n603b『你那天晚上没来』",
-      "notify_denied": "来自 D1 n142；决定本章所有等待是否真的送达"
+      "notify_denied": "来自 D1 n142；决定本章所有等待是否真的送达",
+      "player_named": "来自 D2 的 capture 节点 d2_n219；影响本章她对玩家的称呼（引擎读 variables.player_name）"
     },
     "forbidden_in_this_chapter": [
       "给玩家任何可执行的营救方案",

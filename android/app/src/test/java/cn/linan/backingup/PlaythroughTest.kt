@@ -122,6 +122,7 @@ class PlaythroughTest {
 
                 is StoryEngine.Halt.AwaitingWait -> engine.resolveWait(save, clock, forced = true)
                 is StoryEngine.Halt.AwaitingInput -> engine.playerSays(save, clock, "。")
+                is StoryEngine.Halt.AwaitingCapture -> engine.submitCapture(save, clock, "临安")
                 is StoryEngine.Halt.AwaitingGrant -> engine.resolveGrant(save, clock, granted = true)
                 is StoryEngine.Halt.Paused ->
                     return "走到 ${halt.node.id}（${halt.node.type}）· ${save.metrics.snapshot()} · 转写 ${save.transcript.size} 条"
@@ -200,6 +201,7 @@ class PlaythroughTest {
         is StoryEngine.Halt.AwaitingWait -> "wait@${node.id}"
         is StoryEngine.Halt.AwaitingInput -> "input@${node.id}"
         is StoryEngine.Halt.AwaitingGrant -> "grant@${node.id}"
+        is StoryEngine.Halt.AwaitingCapture -> "capture@${node.id}(${capture.variable})"
         is StoryEngine.Halt.Paused -> "paused@${node.id}(${node.endingName ?: node.type})"
         is StoryEngine.Halt.DeadEnd -> "DEAD@${nodeId}: $why"
     }
