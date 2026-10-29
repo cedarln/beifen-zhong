@@ -44,6 +44,14 @@ data class SaveFile(
     var farewellSentFor: String? = null,
     /** d6 的沉默：设定 player_silent 的真实时刻，4 小时闸门按设备时间判，不按游戏时钟 */
     var silenceSince: Long? = null,
+    /**
+     * 走到本章章末（`chapter_end`）那一刻的**游戏时间**，null = 本章还没走完。
+     *
+     * 它是 [cn.linan.backingup.engine.ChapterGate] 唯一的锚点：下一章开在"次日早上 07:30"，
+     * 而"次日"必须相对于这一章真正结束的那天算，不能相对于"玩家哪天想起来打开 App"。
+     * 只在第一次走到章末时写（原地重判会反复经过同一个节点），开章/传送/清空时清掉。
+     */
+    var chapterEndAtGameTime: Long? = null,
     /** 待投递的"退出后补投"（剧本 post_exit_notification），arm 之后由调度器清空 */
     var pendingNotifications: MutableList<PendingNotice> = mutableListOf(),
 
@@ -66,6 +74,7 @@ data class SaveFile(
         installAt = installAt, metrics = Metrics(), flags = mutableMapOf(),
         counters = mutableMapOf(), transcript = mutableListOf(), nodeId = null,
         waitSendsUsed = 0, farewellSentFor = null, silenceSince = null,
+        chapterEndAtGameTime = null,
         pendingNotifications = mutableListOf(), skippedMs = 0L, skippedWaits = mutableListOf(),
         // 清空重开＝这一局没发生过。周年那条已经发出去的通知收不回来，但下一次不许再排
         yearlyDueAt = 0L, yearlySourceNode = null, yearlyMessagesSent = 0,

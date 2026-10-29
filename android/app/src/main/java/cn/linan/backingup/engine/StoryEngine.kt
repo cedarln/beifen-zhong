@@ -104,7 +104,12 @@ class StoryEngine(
             if (node.sendAllowance() > 0 && node.type != "wait") {
                 return Halt.AwaitingInput(node, node.wordLimit ?: DEFAULT_WORD_LIMIT)
             }
-            if (node.chapterEnd == true) return Halt.Paused(node)
+            if (node.chapterEnd == true) {
+                // 章末是"这一天过完了"的事实，只记一次：原地重判会反复经过这个节点，
+                // 每次都改锚点的话，玩家盯着屏幕看她就永远到不了第二天
+                if (save.chapterEndAtGameTime == null) save.chapterEndAtGameTime = clock.gameTime()
+                return Halt.Paused(node)
+            }
 
             val next = node.next ?: node.then
                 ?: return Halt.DeadEnd(id, "没有出边（type=${node.type}）")
@@ -178,6 +183,65 @@ class StoryEngine(
     }
 
     /**
+     * 章与章之间的门：这一章走完了、且游戏时钟跨过了"次日早上"，就把下一章接上。
+     *
+     * 剧本里 `chapter_end` 节点全部没有出边（见 [ChapterGate] 的类注释）：下一章不属于
+     * 这一章的图，它属于第二天。所以这条是唯一的自然跨章入口——冷启动、她那条章间闹钟、
+     * 屏上的秒级自判，三个地方都会走到这里，谁先到算谁，其余两次因为锚点已清空而空转。
+     *
+     * 度量**不注入** `meta.start_state`（那是后门跳章的作弊），玩家自己攒的数带进第二天，
+     * 只按跨过的真实日数扣 integrity：docs/02 规则 2「玩家拖着不玩，她就提前散架」。
+     *
+     * @return null = 现在不该开章（本章没走完 / 还没到次日早上 / 已经是最后一章）
+     */
+    fun openNextChapter(save: SaveFile, clock: GameClock): Halt? {
+        val opens = chapterOpensAt(save) ?: return null
+        if (clock.gameTime() < opens) return null
+        val ended = save.chapterEndAtGameTime ?: return null
+        val days = ChapterGate.daysElapsed(ended, clock.gameTime())
+        val next = save.chapter + 1
+        save.metrics.set("integrity", save.metrics.integrity - days * ChapterGate.INTEGRITY_DECAY_PER_DAY)
+        save.chapter = next
+        save.nodeId = null
+        save.chapterEndAtGameTime = null
+        save.waitUntilGameTime = null
+        save.waitRef = null
+        save.waitSendsUsed = 0
+        return advance(save, clock)
+    }
+
+    /** 下一次开章的游戏时刻；null = 现在不在章与章之间。给秒级自判和章间闹钟共用 */
+    fun chapterOpensAt(save: SaveFile): Long? {
+        val ended = save.chapterEndAtGameTime ?: return null
+        if (save.chapter >= ChapterGate.LAST_CHAPTER) return null
+        if (repo.chapterEntry(save.chapter + 1) == null) return null
+        return ChapterGate.openingAt(ended)
+    }
+
+    /**
+     * 老存档补锚点（v0.1.5 之前根本没有这道门，走到章末的存档里这个字段是空的）。
+     *
+     * 不补的话，已经读完 D1 的玩家装上这一版会永远停在"她那边还在过时间"——那是我们后补
+     * 规则的债，不该让她再等一个早上。所以拿**最后一次游玩**那一刻当章末时刻：
+     * 她三天前读完的，今天就该接上 D2；此后的日子照旧一天一章。
+     */
+    fun seedChapterAnchor(save: SaveFile, clock: GameClock) {
+        if (save.chapterEndAtGameTime != null) return
+        val node = save.nodeId?.let { repo.node(it) } ?: return
+        if (node.chapterEnd == true) save.chapterEndAtGameTime = clock.gameTime(save.lastPlayedAt)
+    }
+
+    /**
+     * 章间闹钟的文案：**下一章入口节点的第一句**（引擎不发明内容，通知也不行）。
+     * 没有下一章 / 还没走到章末时返回 null，调用方就不排这条。
+     */
+    fun nextChapterOpeningLine(save: SaveFile, clock: GameClock): String? {
+        chapterOpensAt(save) ?: return null
+        val entry = repo.chapterEntry(save.chapter + 1) ?: return null
+        return entry.resolvedText(condition(save, clock)).firstOrNull()
+    }
+
+    /**
      * 结局页之后：『关掉它』按钮的落点（after 字段）。
      * d7_end 负责解锁快速模式与尾声预告，所以这里只负责走过去。
      */
@@ -194,6 +258,7 @@ class StoryEngine(
         save.chapter = chapterOf(nodeId) ?: save.chapter
         applyChapterStartState(save)
         save.waitUntilGameTime = null
+        save.chapterEndAtGameTime = null
         save.debugUsed = true
         save.transcript.add(
             TranscriptLine(
@@ -280,7 +345,8 @@ class StoryEngine(
      */
     fun playerSays(save: SaveFile, clock: GameClock, rawText: String): Halt {
         val text = rawText.trim()
-        if (text.isEmpty()) return advance(save, clock)
+        // 空话不推进，但也不许把当前节点重新演一遍（这是"原地重判"，不是"再走一次"）
+        if (text.isEmpty()) return advance(save, clock, save.nodeId, reEmitEntry = false)
         val node = save.nodeId?.let { repo.node(it) }
             ?: return Halt.DeadEnd(save.nodeId ?: "", "当前节点不存在，无处可说")
         val allowance = node.sendAllowance()

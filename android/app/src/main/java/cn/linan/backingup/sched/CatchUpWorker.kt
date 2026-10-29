@@ -3,6 +3,7 @@ package cn.linan.backingup.sched
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import cn.linan.backingup.engine.ChapterGate
 import cn.linan.backingup.engine.GameClock
 import cn.linan.backingup.engine.SaveFile
 import cn.linan.backingup.engine.SaveStore
@@ -44,7 +45,7 @@ class CatchUpWorker(
             if (text != null && ref != null) {
                 if (clock.gameTime() >= due) post(app, save, ref, text)
                 else if (!ReminderScheduler.hasPendingAlarm(app, ref)) {
-                    ReminderScheduler.schedule(app, clock.remaining(due), ref, text)
+                    ReminderScheduler.schedule(app, clock.deviceDelayUntil(due), ref, text)
                 }
             }
         }
@@ -81,7 +82,32 @@ class CatchUpWorker(
                 }
             }
         }
+
+        // 4) 章与章之间那条（次日早上的"早。"）：和上面三条同一个道理——
+        //    重启清空调度器、不清存档，锚点还在存档里，所以这里能自己补回来。
+        chapterGate(app, save, clock)
         return Result.success()
+    }
+
+    /**
+     * 章与章之间那条（次日早上她敲的"早。"）。
+     *
+     * 判据全在存档里（章末锚点 + 章号），所以它天然收敛：到点就投，投完 [WakeGate] 的台账
+     * 挡住重复；玩家自己先打开过 App 的话锚点已清空，这里直接不算这一路。
+     * 文案取下一章入口节点的第一句——引擎不发明内容，通知栏也不。
+     */
+    private suspend fun chapterGate(app: Context, save: SaveFile, clock: GameClock) {
+        val ended = save.chapterEndAtGameTime ?: return
+        if (save.chapter >= ChapterGate.LAST_CHAPTER) return
+        val opens = ChapterGate.openingAt(ended)
+        val ref = ChapterGate.refFor(save.chapter + 1)
+        val text = runCatching { ScriptRepository(app).chapterEntry(save.chapter + 1)?.text?.firstOrNull() }
+            .getOrNull() ?: return
+        when {
+            clock.gameTime() >= opens -> post(app, save, ref, text)
+            !ReminderScheduler.hasPendingAlarm(app, ref) ->
+                ReminderScheduler.schedule(app, clock.deviceDelayUntil(opens), ref, text)
+        }
     }
 
     /** 从结局节点的 `sample_yearly_lines` 取"第 N 年"那一句；取不到就什么都不发（引擎不发明内容） */

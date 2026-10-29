@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import cn.linan.backingup.audio.AmbienceDirector
 import cn.linan.backingup.audio.AmbiencePlayer
+import cn.linan.backingup.engine.ChapterGate
 import cn.linan.backingup.engine.DeviceSignals
 import cn.linan.backingup.engine.GameClock
 import cn.linan.backingup.engine.SaveFile
@@ -78,6 +79,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             seenAtLaunch = save.transcript.size
             loaded.complete(Unit)
             clock = GameClock.restore(save.installAt, save.rate, save.offset)
+            // v0.1.5 之前没有"章与章之间的门"：已经读完某章的存档里没有那个锚点，
+            // 不补就会永远停在"她那边还在过时间"。这是我们后补规则的债，不让她再等一早上。
+            engine.seedChapterAnchor(save, clock)
             ambienceOn = settings.ambienceEnabled()
             nightDeliveryOn = settings.nightDeliveryEnabled()
             showInvite = !ambienceOn && !settings.ambienceInvited()
@@ -88,7 +92,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             } else {
                 // 冷启动先补投：逾期不补 = 玩家以为游戏坏了
                 if (save.waitUntilGameTime != null) engine.resolveWait(save, clock)
-                else engine.advance(save, clock)
+                else engine.rejudge(save)     // 重判，不许把当前节点重新演一遍（见 [rejudge]）
             }
             // 两个"她能不能叫醒你"的设备事实，冷启动各读一次真值。
             // 不读真值的话，D1 那几个授权点之前的等待会按"通知已开"来排——
@@ -118,6 +122,14 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             var resolvedFor: Long? = null
             while (true) {
                 delay(1000)
+                // 章与章之间的门：她那边过的是真实的日子。游戏时钟跨过"次日早上"就把下一章接上，
+                // 玩家不需要按任何东西——1× 下这是第二天早上的那一次，3600× 下二十几秒就到。
+                // 判据只在"确实在章间且已到点"时进一次 mutate；开章会把锚点清空，所以不会反复落盘。
+                val opens = engine.chapterOpensAt(save)
+                if (opens != null && clock.gameTime() >= opens) {
+                    mutate { s, eng -> eng.rejudge(s) }
+                    continue
+                }
                 val due = (_state.value.halt as? StoryEngine.Halt.AwaitingWait)?.dueGameTime
                     ?: continue
                 val left = clock.remaining(due).coerceAtLeast(0)
@@ -185,13 +197,13 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
      * 带 emit 的重判会让玩家每盯着屏幕一分钟，她就把同一句话说一遍、那一笔度量再加一次
      * （转写导出《备份》时看得清清楚楚）。
      */
-    fun recheck() = mutate { s, eng -> eng.advance(s, clock, s.nodeId, reEmitEntry = false) }
+    fun recheck() = mutate { s, eng -> eng.rejudge(s) }
 
-    /** 闹钟到点带回来的 ref：确认逾期就结算，没到点什么都不做（防重复投递） */
+    /** 闹钟到点带回来的 ref：确认逾期就结算等待；没到点只做一次**原地**重判（章间那道门也在这一步带出来） */
     fun onWake(ref: String?) = mutate { s, eng ->
         val due = s.waitUntilGameTime
         if (due != null && clock.gameTime() >= due) eng.resolveWait(s, clock)
-        else eng.advance(s, clock, s.nodeId)
+        else eng.rejudge(s)
     }
 
     // ── 设置 ──────────────────────────────────────────────────────────────────
@@ -273,7 +285,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     /** ① 时间倍率：1× / 60× / 3600× / 自定义。时钟层生效，不是逐节点打补丁 */
     fun setRate(rate: Double) {
         clock.setRate(rate.coerceIn(1.0, 3600.0))
-        mutate { s, eng -> eng.advance(s, clock, s.nodeId) }
+        // 这里必须重判一次：倍率一拧，在途等待与"次日早上"可能当场到期。
+        // 但只能走 rejudge——真机玩家撞见过按一次倍率小满就把章末那四句原样再说一遍、
+        // 信任再加一次，因为早先这一行是 advance(s, clock, s.nodeId) 带着默认 emit 的。
+        mutate { s, eng -> eng.rejudge(s) }
     }
 
     /** ③ 按 node id 传送；跳章入口也走这里 */
@@ -285,6 +300,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             s.chapter = chapter
             eng.applyChapterStartState(s, chapter)
             s.nodeId = null
+            // 章末锚点也要清：留着它，后门跳到 D4 玩到一半会被秒级自判一脚踹回"次日早上"开 D5
+            s.chapterEndAtGameTime = null
             s.debugUsed = true
             eng.advance(s, clock)
         }
@@ -303,7 +320,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         mutate { s, eng ->
             s.metrics.set(name, value)
             s.debugUsed = true
-            eng.advance(s, clock, s.nodeId, reEmitEntry = false)
+            eng.rejudge(s)
         }
     }
 
@@ -312,14 +329,14 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         mutate { s, eng ->
             s.debugUsed = true
             eng.applyChapterStartState(s)
-            eng.advance(s, clock, s.nodeId, reEmitEntry = false)
+            eng.rejudge(s)
         }
     }
 
     /** ⑤ 伪造 signal：null 表示取消伪造 */
     fun overrideSignal(name: String, value: Boolean?) {
         signals.override(name, value)
-        mutate { s, eng -> eng.advance(s, clock, s.nodeId, reEmitEntry = false) }
+        mutate { s, eng -> eng.rejudge(s) }
     }
 
     /** 跳等待：把时钟推到 due 之后。等待照常结算，只是"她被压缩了"——记进 skippedMs */
@@ -332,16 +349,16 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         eng.resolveWait(s, clock, forced = true)
     }
 
-    /** 伪造一天：OFFSET += 86_400_000×N，等待与衰减一起被推过去 */
+    /** 伪造一天：OFFSET += 86_400_000×N，等待与衰减一起被推过去（章与章之间的门也一起） */
     fun jumpDays(days: Int) {
         clock.jump(GameClock.DAY_MS * days)
-        mutate { s, eng -> eng.advance(s, clock, s.nodeId) }
+        mutate { s, eng -> eng.rejudge(s) }
     }
 
     /** 夜间窗口按设备时钟还是游戏时钟（docs/04 第三节唯一例外） */
     fun setNightUsesDeviceClock(use: Boolean) {
         signals.nightUsesDeviceClock = use
-        mutate { s, eng -> eng.advance(s, clock, s.nodeId) }
+        mutate { s, eng -> eng.rejudge(s) }
     }
 
     /** ⑥ 结局直达：面板在旁边显示"自然达成需要的前置条件"，我们对比设计意图与实际演出 */
@@ -381,7 +398,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             // 剧本判定读的是 flag（d7_c12 的「我把你存下来了」needs quick_mode、
             // 隐藏结局要 quick_mode == false），存档那个布尔只管界面按钮
             s.flags["quick_mode"] = on
-            eng.advance(s, clock, s.nodeId)
+            eng.rejudge(s)
         }
     }
 
@@ -476,6 +493,23 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     // ── 内部 ────────────────────────────────────────────────────────────────
 
+    /**
+     * 原地重判：只问一句"闸门现在该不该开、这一天过完了没有"，**不许把当前节点重新演一遍**。
+     *
+     * 这一句是玩家报出来的 bug 换来的。`advance(save, clock, save.nodeId)` 的默认
+     * `reEmitEntry = true` 意味着重新贴台词、重新扣效果：按一次后门的「时间倍率」，
+     * 小满就把章末那四句原样再说一遍、信任再加 2；重开 App（冷启动）同样会再来一遍。
+     * 所以凡是"状态没变、只是时间或调试参数变了"的入口，一律走这里。
+     *
+     * 唯一还带 emit 的情况是存档里没有节点——那是本章第一次开局，入口那段话本来就该出现。
+     *
+     * 顺手把章与章之间的门放在最前面：倍率一拧、闹钟一到、第二天一开 App，
+     * 都先问一次"上一章是不是过完了、今天该不该接上下一章"，接不上才原地重判。
+     */
+    private fun StoryEngine.rejudge(save: SaveFile): StoryEngine.Halt =
+        openNextChapter(save, clock)
+            ?: advance(save, clock, save.nodeId, reEmitEntry = save.nodeId == null)
+
     private fun mutate(block: (SaveFile, StoryEngine) -> StoryEngine.Halt) {
         viewModelScope.launch {
             loaded.await()          // 见 [loaded]：读盘没完成前不许动存档
@@ -491,6 +525,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         save.lastPlayedAt = System.currentTimeMillis()
         store.write(save)
         if (halt is StoryEngine.Halt.AwaitingWait) armWait(save, halt)
+        armChapterAlarm(save)
         // 人声只在"走进这个节点"的那一刻放一次：persist 每次状态变动都会走（点一下屏幕、
         // 跳一次声床节拍），在这儿无条件播等于 d7_n711 那六秒被重播无数遍——
         // 而剧本给它的设定是"只有一次，和她妈那次一样"（replay_allowed=0）
@@ -556,8 +591,32 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         // 重排等于反复替换同一个 PendingIntent，并把兜底 worker 的 5 分钟一直往后推——
         // 玩家每次点一下屏幕她就永远迟到 5 分钟。闹钟在，就不动它。
         if (remaining > 0 && ReminderScheduler.hasPendingAlarm(getApplication(), ref)) return
-        val exact = ReminderScheduler.schedule(getApplication(), remaining, ref, text, nightDeliveryOn)
+        // 交给 AlarmManager 的必须是**真实世界**的延迟：remaining 是游戏毫秒，
+        // 3600× 下拿它排闹钟等于让她迟到 3600 倍（在屏上看不出来，切后台才看得出来）
+        val exact = ReminderScheduler.schedule(
+            getApplication(), clock.deviceDelayUntil(halt.dueGameTime), ref, text, nightDeliveryOn,
+        )
         _state.value = _state.value.copy(exactAlarmBlocked = !exact)
+    }
+
+    /**
+     * 章与章之间的那一次敲门（v0.1.5 新加，`chapter-N` 这一路 ref）。
+     *
+     * 没有它，"第二天早上"只能靠玩家自己想起打开 App——那正好把这部作品最核心的东西
+     * （她在那头等着，时间照旧过）降级成一个需要手动续的表单。文案取**下一章入口节点的
+     * 第一句**（D2 是「早。」），引擎不发明内容这条规矩在通知栏里也成立。
+     *
+     * 只在真的走到章末、且这一章还有下一章时排；和等待共用 `alreadyArmed` 那张账，
+     * 所以每次状态变动都走到这里也只会排一次。
+     */
+    private fun armChapterAlarm(save: SaveFile) {
+        val opens = engine.chapterOpensAt(save) ?: return
+        val ref = ChapterGate.refFor(save.chapter + 1)
+        if (ReminderScheduler.hasPendingAlarm(getApplication(), ref)) return
+        val text = engine.nextChapterOpeningLine(save, clock) ?: return
+        val remaining = clock.deviceDelayUntil(opens)
+        if (remaining <= 0L) return      // 到点了：该由重判开章，不该再排一条迟到一分钟的通知
+        ReminderScheduler.schedule(getApplication(), remaining, ref, text, nightDeliveryOn)
     }
 
     /**

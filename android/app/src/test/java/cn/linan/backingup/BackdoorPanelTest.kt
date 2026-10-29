@@ -16,8 +16,8 @@ import java.io.File
  *
  * 三条：
  *   1. 度量滑块必须显式给 `valueRange`，并且量程来自 `BackdoorData.metricRange`；
- *   2. 只做"重判闸门"的后门入口（改度量、伪造 signal）必须带 `reEmitEntry = false`，
- *      否则拖一下滑块她就当前那段话再说一遍、那一笔度量再加一次；
+ *   2. 只做"重判闸门"的入口（改度量、伪造 signal、拧倍率、伪造一天……）一律走 `rejudge()`，
+ *      不许带着 emit 重走当前节点，否则拖一下滑块她就当前那段话再说一遍、那一笔度量再加一次；
  *   3. 设置页那颗「恢复默认」不许碰存档——它只能回滚设置。
  */
 class BackdoorPanelTest {
@@ -58,24 +58,40 @@ class BackdoorPanelTest {
     }
 
     @Test
-    fun `只重判闸门的后门入口不许重新演出当前节点`() {
+    fun `只重判闸门的入口一律走 rejudge，不许重新演出当前节点`() {
         val vm = src("ui/GameViewModel.kt")
+        // 1) 这些入口都只改"时间/调试参数"，不改剧情位置：原地重判必须收口到 rejudge()
         listOf(
             "fun setMetric(",
             "fun resetMetricsToChapterStart(",
             "fun overrideSignal(",
+            "fun setRate(",
+            "fun jumpDays(",
+            "fun setNightUsesDeviceClock(",
+            "fun setQuickMode(",
+            "fun recheck(",
+            "fun onWake(",
         ).forEach { sig ->
             val body = bodyOf(vm, sig)
-            val advances = body.lines().filter { it.contains("eng.advance(") }
-            assertTrue("$sig 里没有 advance 调用，闸门不会重判：$body", advances.isNotEmpty())
-            advances.forEach {
-                assertTrue(
-                    "$sig 重走了当前节点的 emit：拖一下滑块，她会把这段话再说一遍、" +
-                        "这一笔度量再加一次（和 recheck() 修过的是同一类坑）。$it",
-                    it.contains("reEmitEntry = false"),
-                )
-            }
+            assertTrue(
+                "$sig 没走 rejudge()。原地重判一旦带上 emit，她就把当前这段话说第二遍、" +
+                    "那一笔度量加第二次——真机玩家按一次「时间倍率」撞到的就是这个：\n$body",
+                body.contains("rejudge("),
+            )
         }
+        // 2) 整个文件兜底：任何"以存档当前节点为入口"的 advance 都必须写清 reEmitEntry。
+        //    新增入口忘了带，等于把那条 bug 再写一遍。
+        vm.lines()
+            .filterNot { it.trimStart().startsWith("//") || it.trimStart().startsWith("*") }
+            .filter { it.contains("advance(") && (it.contains("s.nodeId") || it.contains("save.nodeId")) }
+            .forEach { line ->
+                assertTrue("这一行重判当前节点却没写 reEmitEntry：$line", line.contains("reEmitEntry"))
+            }
+        // 3) rejudge 自己长对：章间门先问，问不出结果才原地重判，且只有"本章还没演过入口"才 emit
+        val helper = bodyOf(vm, "private fun StoryEngine.rejudge(")
+        assertTrue("rejudge 必须先把章与章之间的门问一遍：\n$helper", helper.contains("openNextChapter("))
+        assertTrue("reEmitEntry 只能由「存档有没有节点」决定：\n$helper",
+            helper.contains("reEmitEntry = save.nodeId == null"))
     }
 
     @Test

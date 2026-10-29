@@ -1,12 +1,13 @@
 package cn.linan.backingup.sched
 
+import cn.linan.backingup.engine.ChapterGate
 import cn.linan.backingup.engine.GameClock
 import cn.linan.backingup.engine.SaveFile
 
 /**
  * 到点之后"这句还该不该说"的判据。纯函数，不碰 Android，所以能在 JVM 单测里逐条验收。
  *
- * 三类 ref（等待 / `post-` 补投 / `yearly-` 周年）加一个投递身份，各自的失败方式：
+ * 四类 ref（等待 / `post-` 补投 / `yearly-` 周年 / `chapter-` 章间）加一个投递身份，各自的失败方式：
  *  · 等待已经被玩家点开、或被后门跳走 → `wait_ref` 已被引擎清空或换掉，这是一次过期唤醒。
  *    不判这一条的话，第二天通知栏会多出昨天那句话的复读。
  *  · Doze 提前唤醒 → 游戏时钟还没走到 `wait_until`。**提前说话比不说话更假**：
@@ -15,6 +16,8 @@ import cn.linan.backingup.engine.SaveFile
  *    说明这条通知根本不该存在（被 `only_if` 挡掉的），闭嘴。
  *  · `yearly-` 只认存档里那一个锚点：`yearly_due_at` 一旦被 VM 推到下一年，
  *    上一年那个迟到的闹钟就永远闭嘴（一年一次的消息，宁可早排不可重排）。
+ *  · `chapter-` 只认"这一章确实还没翻过去"：玩家自己先打开了 App，开章会把章末锚点清空，
+ *    那条排在次日早上的闹钟再醒来就无话可说——同一天早上她不会敲两次门。
  *
  * 判据只读存档与两个时间戳，不读调度器的内存：进程被杀、设备重启之后仍然成立。
  */
@@ -38,6 +41,14 @@ object WakeGate {
                         notice.armedAt > 0L &&
                         nowMillis - notice.armedAt >= notice.delayMs
                 }
+            }
+            ChapterGate.chapterOfRef(ref) != null -> {
+                // 章间那条：ref 里的章号必须还是"下一章"。开章会把锚点清空、把章号推前，
+                // 所以玩家自己先打开了 App、或这条已经是昨天的闹钟时，它闭嘴——
+                // 她不会为同一天早上敲两次门。
+                val ended = save.chapterEndAtGameTime ?: return false
+                ChapterGate.chapterOfRef(ref) == save.chapter + 1 &&
+                    gameTimeMillis >= ChapterGate.openingAt(ended)
             }
             else -> {
                 val due = save.waitUntilGameTime ?: return false
@@ -69,6 +80,11 @@ object WakeGate {
                 save.pendingNotifications
                     .firstOrNull { POST_PREFIX + it.node == ref && it.armedAt > 0L }
                     ?.let { "$ref@${it.armedAt}" }
+
+            ChapterGate.chapterOfRef(ref) != null ->
+                // 后缀用章末那一刻：二周目重走 D1 会留下一个新的锚点，
+                // 于是"第二天早上那句『早。』"在第二轮仍然是新的一次投递，不会被台账消音
+                save.chapterEndAtGameTime?.let { "$ref@$it" }
 
             else -> if (save.waitRef == ref) save.waitUntilGameTime?.let { "$ref@$it" } else null
         }

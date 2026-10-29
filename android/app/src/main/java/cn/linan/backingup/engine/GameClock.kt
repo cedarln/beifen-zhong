@@ -69,6 +69,17 @@ class GameClock(
     /** 到点了吗。等待在途与否都用它判，避免"两处比较、一处写反" */
     fun isDue(untilGameTime: Long): Boolean = gameTime() >= untilGameTime
 
+    /**
+     * 距某个游戏时刻，**真实世界**还要等多久——排闹钟用它，[remaining] 不行。
+     *
+     * `remaining` 的差值是游戏毫秒：3600× 下"还有 22 小时"其实是"还有 22 秒"。
+     * 把这个数直接交给 AlarmManager，倍率越高她越迟到（3600× 时迟到 3600 倍），
+     * 而等待在屏上照常由秒级自判结算，所以这个错只在玩家把 App 切到后台时才露头。
+     * 换算留在时钟层做，调度层继续只认识真实世界的唤醒时刻（见 ReminderScheduler 的注释）。
+     */
+    fun deviceDelayUntil(untilGameTime: Long): Long =
+        (remaining(untilGameTime) / _rate.value).toLong().coerceAtLeast(0L)
+
     fun gameMinutesBetween(from: Long, to: Long): Double = (to - from) / 60_000.0
 
     companion object {
